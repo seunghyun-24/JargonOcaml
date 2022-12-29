@@ -1,20 +1,33 @@
-entry_to_channel : in_channel -> (int * int)
-dictionary_to_file : in_channel -> (int * int) list
+(*entry_of_channel : in_channel -> (int * int)
+dictionary_of_file : in_channel -> (int * int) list
+*)
 
-let entry_to_channel ch =
+let entry_of_channel : in_channel -> (int * int)
+(*let entry_of_channel ch =*)
+= fun ch ->
   let e1 = input_line ch in
   let e2 = input_line ch in
-    (e1, e2)
+    (int_of_string e1, int_of_string e2)
 
-let rec dictionary_to_channel ch =  
+let rec dictionary_of_channel : in_channel -> (int * int) list
+= fun ch ->
+(*let rec dictionary_of_channel ch =  *)
   try
     let e = entry_of_channel ch in
-      e :: dictionary_to_channel ch
+      e :: dictionary_of_channel ch
   with 
     End_of_file -> []
 
-    
+(*dictionary_of_file : string -> (int * int) list*)
 
+let dictionary_of_file filename = 
+  let ch = open_in filename in
+  let dict = dictionary_of_channel ch in 
+    close_in ch;
+    dict
+
+
+    (*
 dictionary_to_file : (int * int) -> (int * int) list -> unit
 
 let dictionary_to_file filename graphEdge =
@@ -39,6 +52,6 @@ Enum.iter ( fun line -> (*Do something with line here*) ) filelines*)
 
 (*https://stackoverflow.com/questions/5774934/how-do-i-read-in-lines-from-a-text-file-in-ocaml*)
 
-
+      *)
 
 
