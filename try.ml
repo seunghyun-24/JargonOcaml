@@ -36,22 +36,33 @@ let dictionary_to_file filename graphEdge =
     dictionary_to_file ch graphEdge;
     close_out ch
 
-let read_file filename =
-  let lines = ref [] in
-  let ch = open_in filename in
-  try
-    while true; do
-      lines := input_line ch :: !lines
-    done; !lines
-  with End_of_file ->
-    close_in ch;
-    List.rev !lines;;
-
-(*let filelines = File.lines_of filename in
+    (*let filelines = File.lines_of filename in
 Enum.iter ( fun line -> (*Do something with line here*) ) filelines*)
 
 (*https://stackoverflow.com/questions/5774934/how-do-i-read-in-lines-from-a-text-file-in-ocaml*)
 
       *)
 
+(* 두 번째 시도 *)
+let read_file filename
+= fun filename ->
+  let graphEdgeList = ref [] in
+  let entry = open_in filename in
+  try
+    while true; do
+      graphEdgeList := entry_of_channel entry :: !graphEdgeList
+    done; !graphEdgeList
+  with End_of_file ->
+    close_in entry;
+    List.rev !graphEdgeList;;
 
+(* 세 번째 시도 *)
+let read_lines name =
+= fun name ->
+  let ic = open_in name in
+  let try_read () =
+    try Some (input_line ic) with End_of_file -> None in
+  let rec loop acc = match try_read () with
+    | Some s -> loop (s :: acc)
+    | None -> close_in ic; List.rev acc in
+  loop []
