@@ -1,11 +1,11 @@
 (*entry_of_channel : in_channel -> (int * int)
 dictionary_of_file : in_channel -> (int * int) list
 *)
-
+(*아 힘들다*)
 let entry_of_channel : in_channel -> (int * int)
 (*let entry_of_channel ch =*)
 = fun ch ->
-  let e1 = input_line ch in
+  let e1 = input_line ch i다
   let e2 = input_line ch in
     (int_of_string e1, int_of_string e2)
 
