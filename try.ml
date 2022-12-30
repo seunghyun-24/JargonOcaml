@@ -2,8 +2,6 @@
   명령어 : dictionary_of_file "MUTAG_A.txt";;
   결과값 : string -> (int * int) list = <fun> *)
 
-open Str
-
 let mdict = ref []
 let extend_dict (k) = mdict := k::!mdict
 
@@ -104,12 +102,16 @@ exception InputError
 
 let make_tuple oFileLine 
 = let rawline = input_line oFileLine in
-  let _str = split_on_char ", " rawline in
+  let sep = ',' in
+  let _str = String.split_on_char sep rawline in
   match _str with
   | h::t -> 
-    match t with 
-    | h1::t -> (int_of_string h, int_of_string h1)
-  | _ -> raise InputError
+    match t with
+    | h2::t -> (int_of_string h, int_of_string (String.trim h2))
+    | h2::[] -> (int_of_string h, int_of_string (String.trim h2))
+    | _ -> raise(Failure ("Variable is not included in environment"))
+  | h::[] -> raise(Failure ("Variable is not included in environment"))
+  | _ -> raise(Failure ("Variable is not included in environment"))
 
 let read_graphEdge oFile
 = let lines = ref 0 in
@@ -122,13 +124,12 @@ let read_graphEdge oFile
     done 
   with 
   End_of_file ->
-    print_tuples !edgeList;
     print_string "There were ";
     print_int !lines;
     print_string " lines.";
+    print_newline ();
+    print_tuples !edgeList;
     print_newline ()
-    
-
 
 let file_graphEdge filename
 = let oFile = open_in filename in
