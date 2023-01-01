@@ -1,6 +1,4 @@
-(*1차 ! : MUTAG_A.txt 읽어오기 
-  명령어 : file_graphEdge "MUTAG_A.txt";;
-  결과값 : string -> (int * int) list = <fun> *)
+(*1차 ! : 파일들 읽어서 데이터 저장하기*)
 
   let edgeList = ref [] (*memory for thple - MUTAG_A.txt*)
   let edgeLables = ref []
@@ -46,11 +44,6 @@
       done 
     with 
     End_of_file ->
-      (*to check the tuple list read*)
-    (*
-      print_tuples !edgeList; 
-      print_newline ()
-    *)
       (* to check the number of lines - behind four lines*)
     (*
       print_string "There were ";
