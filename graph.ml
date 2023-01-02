@@ -1,6 +1,10 @@
+module type Graphs = struct
+  type graph
+end
+
 module Graph = struct
-  type nodeData
-  type edgeData
+  type nodes
+  type edges
 
   module rec Node : struct
     type t with exp

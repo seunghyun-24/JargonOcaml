@@ -92,19 +92,6 @@
     with 
     _ -> close_in oFile
 
-  with open("MUTAG/MUTAG_graph_indicator.txt") as file:
-  i = 0 
-  for line in file.readlines():
-    graph_idx = line.strip()
-    idx = int(graph_idx) - 1
-    node_to_graph[i] = idx
-    if not idx in graph_to_nodes:
-      graph_to_nodes[idx] = []
-    graph_to_nodes[idx].append(i)
-    graph_to_edges[idx] = []
-    i = i+1
-
-
   let read_graph_indicator oFile
   = let lines = ref 0 in
     try 
@@ -117,7 +104,6 @@
       done
     with
     End_of_file -> print_newline ();
-
   
   let file_graph_indicator filename
   = let oFile = open_in filename in
