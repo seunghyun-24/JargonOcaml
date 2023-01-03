@@ -2,8 +2,8 @@
 graph_to_nodes = {}
 node_to_graph = {}*)
 
-let graph_to_edges = [||]
-let graph_to_nodes = [||]
+let graph_to_edges = ref [||]
+let graph_to_nodes = ref [||]
 let node_to_graph = [||]
 
 (*with open("MUTAG/MUTAG_graph_indicator.txt") as file:
@@ -24,10 +24,25 @@ let read_graph_indicator oFile
     let line = input_line oFile in
     let graph_idx = int_of_string line in
     let idx = graph_idx -1 in      
-    if (Array.mem idx graph_to_nodes = false) then Array.set graph_to_nodes (idx) []
-    else ();
-    Array.set graph_to_nodes (idx) [i];
+    if (Array.mem idx !graph_to_nodes = false) 
+      then begin 
+        if( ((Array.length !graph_to_nodes) -1) < idx) then 
+          let a = Array.make (idx - (Array.length !graph_to_nodes) +1) (-1)
+          in graph_to_nodes := Array.append !graph_to_nodes a;
+          (*graph_to_nodes := Array.set !graph_to_nodes (idx) (-1)*)
+          !graph_to_nodes.(idx) <- (-1);
+        else begin !graph_to_nodes.(idx) <- (-1); end
+      end
+    else begin () end;
+
+    if( ((Array.length !graph_to_nodes) -1) < idx) then 
+      let a = Array.make (idx - (Array.length !graph_to_nodes) +1) (-1)
+      in graph_to_nodes := Array.append !graph_to_nodes a;
+    else begin () end;
+    
+    !graph_to_nodes.(idx) <- !(i);
     i := !i + 1
+    
   done
   with
     End_of_file -> ()
@@ -58,6 +73,7 @@ with open("MUTAG/MUTAG_A.txt") as file:
       graph_to_edges[j] = [i]
     i = i + 1 *)
 
+    
 exception InputError
 
 let make_tuple oFileLine 
@@ -68,9 +84,7 @@ let make_tuple oFileLine
   | h::t -> 
     match t with
       | h2::t -> (int_of_string h, int_of_string (String.trim h2))
-      | h2::[] -> (int_of_string h, int_of_string (String.trim h2))
       | _ -> raise InputError
-  | h::[] -> raise InputError
   | _ -> raise InputError
   
   (*The function to extend memory for tuple list - MUTAG_A.txt*)
@@ -81,10 +95,10 @@ let read_graphEdge oFile
       let line = make_tuple oFile in
       lines := !lines +1; (*to check the number of lines*)
       let a = [|line|] in
-      let graph_to_edges = Array.append graph_to_edges a in ()
+      graph_to_edges := Array.append !(graph_to_edges) a 
     done
   with 
-  End_of_file -> ()
+    End_of_file -> ()
   
   (*명령어 : file_graphEdge "MUTAG_A.txt";;*)   
 let file_graphEdge filename 
@@ -105,13 +119,14 @@ with open("MUTAG/MUTAG_graph_labels.txt") as file:
     i = i+1
 *)
 
-let graph_to_label = [||]
+let graph_to_label = ref [||]
 
 let read_graph_labels oFile
 = let i = ref 0 in
   try while true do
-    let line = input_line oFile in
-    Array.set graph_to_label !i (int_of_string(line));
+    print_newline ();
+    let line = read_line in
+    !graph_to_label.(!i) <- ((int_of_string line));
     i := !i + 1
   done
   with

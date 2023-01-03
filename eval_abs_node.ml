@@ -28,7 +28,7 @@
         let quit_loop = ref false in
         while not !quit_loop do
           let (bot, top) = abs_node.(!feat_idx) in
-          if (x_node.(!node).(!feat_idx) < bot || top < x_node.(!node).(!feat_idx)) then (flag := false; quit_loop := true)
+          if (!x_node.(!node).(!feat_idx) < bot || top < !x_node.(!node).(!feat_idx)) then (flag := false; quit_loop := true)
           else ();
           feat_idx := !feat_idx + 1;
         done;
