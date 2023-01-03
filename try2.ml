@@ -4,7 +4,7 @@ node_to_graph = {}*)
 
 let graph_to_edges = ref [||]
 let graph_to_nodes = ref [||]
-let node_to_graph = [||]
+let node_to_graph = ref [||]
 
 (*with open("MUTAG/MUTAG_graph_indicator.txt") as file:
   i = 0 
@@ -23,7 +23,14 @@ let read_graph_indicator oFile
   try while true do
     let line = input_line oFile in
     let graph_idx = int_of_string line in
-    let idx = graph_idx -1 in      
+    let idx = (graph_idx -1) in
+
+    if( ((Array.length !node_to_graph) -1) < !i) then 
+      let k = Array.make (!i - (Array.length !node_to_graph) +1) (-1)
+      in node_to_graph := Array.append !node_to_graph k;
+    else begin () end;
+    !node_to_graph.(!i) <- idx;
+
     if (Array.mem idx !graph_to_nodes = false) 
       then begin 
         if( ((Array.length !graph_to_nodes) -1) < idx) then 
@@ -39,7 +46,6 @@ let read_graph_indicator oFile
       let a = Array.make (idx - (Array.length !graph_to_nodes) +1) (-1)
       in graph_to_nodes := Array.append !graph_to_nodes a;
     else begin () end;
-    
     !graph_to_nodes.(idx) <- !(i);
     i := !i + 1
     
@@ -51,6 +57,7 @@ let file_graph_indicator filename
 = let oFile = open_in filename in
   try
     read_graph_indicator oFile;
+    (*update_node_to_graph oFile;*)
     close_in oFile;
   with
   _ -> close_in oFile
@@ -124,9 +131,15 @@ let graph_to_label = ref [||]
 let read_graph_labels oFile
 = let i = ref 0 in
   try while true do
-    print_newline ();
-    let line = read_line in
-    !graph_to_label.(!i) <- ((int_of_string line));
+    let line = input_line oFile in
+    let a = int_of_string line in
+
+    if( ((Array.length !graph_to_label) -1) < !i) then 
+      let k = Array.make (!i - (Array.length !graph_to_label) +1) (-1)
+      in graph_to_label := Array.append !graph_to_label k;
+    else begin () end;
+
+    !graph_to_label.(!i) <- a;
     i := !i + 1
   done
   with
@@ -161,18 +174,25 @@ let read_node_labels oFile
 = let i = ref 0 in
   try while true do
     let label = input_line oFile in
-    let int_label = int_of_string label in
-    Array.set !node_to_label !i int_label;
+    let int_label = (int_of_string label) in
+    
+    if( ((Array.length !node_to_label) -1) < !i) then 
+      let k = Array.make (!i - (Array.length !node_to_label) +1) (-1)
+      in node_to_label := Array.append !node_to_label k;
+    else begin () end;
+
+    !node_to_label.(!i) <- int_label;
+
     i := !i + 1;
-    if (int_label > !max_node_label) then max_node_label := int_label
-    else ()
+    if (int_label > !max_node_label) then max_node_label := (int_label)
+    else()
   done
   with
     End_of_file -> ()
 
 let file_node_labels filename
 = let oFile = open_in filename in
-  try 
+  try
     read_node_labels oFile;
     close_in oFile;
   with
@@ -180,12 +200,13 @@ let file_node_labels filename
 
   
 let x_node = ref [||]
-let x_node = Array.make_matrix (Array.length !node_to_label) (Array.length !node_to_label) !x_node
+let x_node = Array.make_matrix (Array.length !node_to_label) (Array.length !node_to_label) (ref [||])
 
-let update_x_node k
-= for i = 1 to Array.length !node_to_label do
-    Array.set (x_node.(i).(!node_to_label.(i))) i k
+let update_x_node
+= for i = 0 to Array.length !node_to_label do
+    Array.set !(x_node.(i).(!node_to_label.(i))) i 1
 done
+
 (*
 let update_x_node 
 = for val = 0 to node_to_label.len do
