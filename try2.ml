@@ -107,7 +107,7 @@ with open("MUTAG/MUTAG_graph_labels.txt") as file:
 
 let graph_to_label = [||]
 
-let graph_labels oFile
+let read_graph_labels oFile
 = let i = ref 0 in
   try while true do
     let line = input_line oFile in
@@ -117,10 +117,10 @@ let graph_labels oFile
   with
     End_of_file -> ()
 
-let read_graph_labels filename
+let file_graph_labels filename
 = let oFile = open_in filename in
   try 
-    graph_labels oFile;
+    read_graph_labels oFile;
     close_in oFile;
   with
   _ -> End_of_file
@@ -139,16 +139,38 @@ with open("MUTAG/MUTAG_node_labels.txt") as file:
       max_node_label = int_label
 *)
 
+let max_node_label = ref 0;
+let node_to_labe = ref [||]
+
+let read_node_labels oFile
+= let i = ref 0 in
+  try while true do
+    let label = input_line oFile in
+    let int_label = int_to_string label in
+    Array.set node_to_label i int_label;
+    i := !i + 1;
+    if (int_label > !max_node_label) then mox_node_labe := int_label
+    then ()
+  done
+  with
+    End_of_file -> ()
+
+let file_node_labels filename
+= let oFile = open_in filename in
+  try 
+    read_node_labels oFile;
+    close_in oFile;
+  with
+  _ -> End_of_file
+
+  
 let x_node = ref [||]
+let x_node = Array.make_matrix (Array.length node_to_label) (Array.length node_to_label) x_node
 
-let make_x_node
-= for i = 0 to node_to_label.len do
-    x_node.append([]);
-    for j = 0 to max_node_label.len+1 
-    x_node.(i).append(0)
+let update_x_node 
+= for val = 0 to Array.length node_to_label do
+    x_node.(val).(node_to_label.(val)) <- 1
 done
-
-
 (*
 let update_x_node 
 = for val = 0 to node_to_label.len do
