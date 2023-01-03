@@ -165,11 +165,11 @@ let file_node_labels filename
 
   
 let x_node = ref [||]
-let x_node = Array.make_matrix (Array.length !node_to_label) (Array.length !node_to_label) x_node
+let x_node = Array.make_matrix (Array.length !node_to_label) (Array.length !node_to_label) !x_node
 
 let update_x_node k
 = for i = 1 to Array.length !node_to_label do
-    Array.set !(x_node.(i).(!node_to_label.(i))) i k
+    Array.set (x_node.(i).(!node_to_label.(i))) i k
 done
 (*
 let update_x_node 
