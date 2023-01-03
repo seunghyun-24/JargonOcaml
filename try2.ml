@@ -61,17 +61,17 @@ with open("MUTAG/MUTAG_A.txt") as file:
 exception InputError
 
 let make_tuple oFileLine 
-  = let rawline = input_line oFileLine in (*raw line 형태는 'int, int'*)
-    let sep = ',' in
-    let _str = String.split_on_char sep rawline in
-    match _str with
-    | h::t -> 
-      match t with
+= let rawline = input_line oFileLine in (*raw line 형태는 'int, int'*)
+  let sep = ',' in
+  let _str = String.split_on_char sep rawline in
+  match _str with
+  | h::t -> 
+    match t with
       | h2::t -> (int_of_string h, int_of_string (String.trim h2))
       | h2::[] -> (int_of_string h, int_of_string (String.trim h2))
       | _ -> raise InputError
-    | h::[] -> raise InputError
-    | _ -> raise InputError
+  | h::[] -> raise InputError
+  | _ -> raise InputError
   
   (*The function to extend memory for tuple list - MUTAG_A.txt*)
 let read_graphEdge oFile
@@ -111,7 +111,7 @@ let read_graph_labels oFile
 = let i = ref 0 in
   try while true do
     let line = input_line oFile in
-    Array.set graph_to_label !i (int_to_string(line))
+    Array.set graph_to_label !i (int_of_string(line));
     i := !i + 1
   done
   with
@@ -123,7 +123,7 @@ let file_graph_labels filename
     read_graph_labels oFile;
     close_in oFile;
   with
-  _ -> End_of_file
+  _ -> close_in oFile
 
   (*
 max_node_label = 0
@@ -139,18 +139,18 @@ with open("MUTAG/MUTAG_node_labels.txt") as file:
       max_node_label = int_label
 *)
 
-let max_node_label = ref 0;
-let node_to_labe = ref [||]
+let max_node_label = ref 0
+let node_to_label = ref [||]
 
 let read_node_labels oFile
 = let i = ref 0 in
   try while true do
     let label = input_line oFile in
-    let int_label = int_to_string label in
-    Array.set node_to_label i int_label;
+    let int_label = int_of_string label in
+    Array.set !node_to_label !i int_label;
     i := !i + 1;
-    if (int_label > !max_node_label) then mox_node_labe := int_label
-    then ()
+    if (int_label > !max_node_label) then max_node_label := int_label
+    else ()
   done
   with
     End_of_file -> ()
@@ -161,15 +161,15 @@ let file_node_labels filename
     read_node_labels oFile;
     close_in oFile;
   with
-  _ -> End_of_file
+  _ -> close_in oFile
 
   
 let x_node = ref [||]
-let x_node = Array.make_matrix (Array.length node_to_label) (Array.length node_to_label) x_node
+let x_node = Array.make_matrix (Array.length !node_to_label) (Array.length !node_to_label) x_node
 
-let update_x_node 
-= for val = 0 to Array.length node_to_label do
-    x_node.(val).(node_to_label.(val)) <- 1
+let update_x_node k
+= for i = 1 to Array.length !node_to_label do
+    Array.set !(x_node.(i).(!node_to_label.(i))) i k
 done
 (*
 let update_x_node 
