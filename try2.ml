@@ -199,12 +199,17 @@ let file_node_labels filename
   _ -> close_in oFile
 
   
-let x_node = ref [||]
+
 let x_node = Array.make_matrix (Array.length !node_to_label) (Array.length !node_to_label) (ref [||])
 
 let update_x_node
-= for i = 0 to Array.length !node_to_label do
-    Array.set !(x_node.(i).(!node_to_label.(i))) i 1
+= for i = 1 to Array.length !node_to_label do
+  if( ((Array.length !node_to_label) -1) < (i-1) ) then 
+    let k = Array.make (i-1 - (Array.length !node_to_label) +1) (-1)
+    in node_to_label := Array.append !node_to_label k;
+  else begin () end;
+
+  Array.set !(x_node.(i-1).(!node_to_label.(i-1))) i 1
 done
 
 (*
