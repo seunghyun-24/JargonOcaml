@@ -2,7 +2,7 @@ let rec read_feature oFile features
 = try 
   let line = input_line oFile in
     read_feature oFile (features @ [[(int_of_string line)]]) 
-with 
+with x_
   End_of_file -> features 
 
 let rec read_graph_labels oFile labels 
@@ -40,3 +40,5 @@ let indicator_len = List.length indicator
 let channel = open_in "MUTAG_graph_labels.txt" 
 let labels = read_graph_labels channel []
 let labels_len = List.length labels 
+
+

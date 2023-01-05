@@ -4,13 +4,26 @@ exception CannotBeHappened
 type abstract_graph = abs_node list * abs_edge list
 and abs_node = itv list 
 and abs_edge = triple list
-and triple = itv * from_idx * to_idx
+and triple = itv list * from_idx * to_idx
 and itv = Itv of float * float 
 and from_idx = int
 and to_idx = int 
 
+(*give the simple test-case*)
+let abs_node0 = [Itv (0.0, 1.0); Itv (1.0, 2.0)]
+let abs_node1 = [Itv (-2.0, 2.0); Itv (-2.0, 2.0)]
+let abs_nodes = [abs_node0 ; abs_node1]
+let abs_edge0 = ([Itv (0.0, 1.0); Itv (0.0, 1.0)] , 0, 1)
+let abs_edges = [abs_edge0]
+let abs_graph0 = [abs_nodes, abs_edges]
+
+let nodes = [0;1;2;3]
+let edges = [(0,1);(1,2);(2,3)]
+let x_node = [[0.0;0.0];[1.0;1.0];[2.0;2.0];[3.0;3.0]]
+let x_edge = [[0.0;0.0];[0.0;0.0];[0.0;0.0]]
 
 
+(*
 let rec features_belong_to_itvs features itvs 
 = match features, itvs with
   | ([],[]) -> true
@@ -19,25 +32,32 @@ let rec features_belong_to_itvs features itvs
 
 let eval_abs_node abs_node graph_nodes x_node 
 = List.filter (fun n -> features_belong_to_itvs (List.nth x_node n) abs_node) graph_nodes
-
-let abs_node = [(0.0,1.0); (1.0,2.0)]
-let nodes = [0;1;2;3]
-let x_node = [[0.0;0.0];[1.0;1.0];[2.0;2.0];[3.0;3.0]]
-
-let filtered_nodes = eval_abs_node abs_node nodes x_node
+*)
 
 
-
-let rec features_belong_to_itvs_e features triple_itvs
-= match features, triple_itvs with
+let rec features_belong_to_itvs features itvs 
+= match features, itvs with
   | ([],[]) -> true
-  | (f :: features', (itv, from_i, to_i) :: itvs') -> if f < from_i || f > to_i then false else features_belong_to_itvs_e features' itvs'
+  | (f :: features', (*Check this*) Itv (l,h) :: itvs') -> if f < l || f > h then false else features_belong_to_itvs features' itvs'
+  | _ -> raise CannotBeHappened
+
+let eval_abs_node abs_node graph_nodes x_node 
+= List.filter (fun n -> features_belong_to_itvs (List.nth x_node n) abs_node) graph_nodes
+
+let filtered_nodes = eval_abs_node abs_node0 nodes x_node
+
+
+let rec features_belong_to_itvs_e features triple_itvs (*float_list, triple list*)
+= match (features, triple_itvs) with
+  | ([], [])-> true
+  | (f :: features', Itv (l, h) :: itvs') -> if (f < l || f > h) then false else features_belong_to_itvs_e features' itvs'
   | _ -> raise CannotBeHappened
 
 let eval_abs_edge abs_edge graph_edges x_edge
-= List.filter (fun n -> features_belong_to_itvs_e (List.nth x_edge n) abs_edge) graph_edges
+= let (abs_edge_itv_list, p, q) = abs_edge in
+  List.filter (fun n -> features_belong_to_itvs_e (List.nth x_edge n) abs_edge_itv_list) graph_edges
 
-let filtered_edges = eval_abs_edge abs_edge abs_edge x_edge
+let filtered_edges = eval_abs_edge abs_edge0 edges x_edge
 
 (*
 let up_case_0 nodes edges my_new_subgraph p_con q_con my_set key new_subgraphs candidate_concrete_edges abs_node_idx_to_concrete_nodes op_a _val
@@ -153,4 +173,4 @@ let eval_abs_graph abs_graph nodes edges op_a x_node x_edge subgraph
   in (save_subgraphs subgraph candidate_abs_edges [ [], [] ] filtered_edges filtered_nodes op_a)
 
  (* ToDo *) 
-    
+
