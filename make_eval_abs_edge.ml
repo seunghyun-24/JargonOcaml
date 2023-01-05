@@ -37,15 +37,15 @@ let eval_abs_edge abs_edge graph_edges x_edge
 
 let filtered_edges = eval_abs_edge abs_edge0 edges x_edge
 
-let rec features_belong_to_itvs_ features triple_itvs n (*float_list, triple list*)
+let rec features_belong_to_itvs_ features triple_itvs (*float_list, triple list*)
 = match (features, triple_itvs) with
   | ([], [])-> true
-  | (f :: features', Itv (l, h) :: itvs') -> if (List.nth f n < l || List.nth f n > h) then false else features_belong_to_itvs_ features' itvs' (n+1)
+  | (f :: features', Itv (l, h) :: itvs') -> if (f < l || f > h) then false else features_belong_to_itvs_ features' itvs'
   | _ -> raise CannotBeHappened
 
 let eval_abs_ed abs_edge graph_edges x_edge
 = let (abs_edge_itv_list, p, q) = abs_edge in
-  filter (features_belong_to_itvs_ x_edge abs_edge_itv_list 0) graph_edges
+  filter (lambda x: (features_belong_to_itvs_ (List.nth x_edge x) abs_edge_itv_list)) graph_edges
 
 let filt = eval_abs_ed abs_edges abs_edge0 x_edge
 
