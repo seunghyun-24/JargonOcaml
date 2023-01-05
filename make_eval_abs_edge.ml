@@ -21,34 +21,28 @@ let edges = [(0,1);(1,2);(2,3)]
 let x_node = [[0.0;0.0];[1.0;1.0];[2.0;2.0];[3.0;3.0]]
 let x_edge = [[0.0;0.0];[0.0;0.0];[0.0;0.0]]
 
+(*
 let rec filter p = function
   | [] -> [(0, 0)]
   | h::t -> if p then h :: filter p t else filter p t;;
+*)
 
-let rec features_belong_to_itvs_e features triple_itvs (*float_list, triple list*)
-= match (features, triple_itvs) with
-  | ([], [])-> true
-  | (f :: features', Itv (l, h) :: itvs') -> if (f < l || f > h) then false else features_belong_to_itvs_e features' itvs'
+let rec feature_belong_to a b 
+= match (a, b) with
+  | ([], []) -> true
+  | (f::features', Itv (l, h) :: itvs') -> if (f < l || f > h) then false else feature_belong_to features' itvs'
   | _ -> raise CannotBeHappened
 
-let eval_abs_edge abs_edge graph_edges x_edge
-= let (abs_edge_itv_list, p, q) = abs_edge in
-  List.filter (fun n -> features_belong_to_itvs_e (List.nth x_edge n) abs_edge_itv_list) graph_edges
-
-let filtered_edges = eval_abs_edge abs_edge0 edges x_edge
-
-let rec features_belong_to_itvs_ features triple_itvs (*float_list, triple list*)
-= match (features, triple_itvs) with
-  | ([], [])-> true
-  | (f :: features', Itv (l, h) :: itvs') -> if (f < l || f > h) then false else features_belong_to_itvs_ features' itvs'
-  | _ -> raise CannotBeHappened
+let rec feature _x_edge_list graph_edges abs_edge_itv_list
+= match _x_edge_list with
+  | [] -> graph_edges
+  | h::t -> let graph_edges = (List.filter (fun n -> feature_belong_to h abs_edge_itv_list) graph_edges) in feature t graph_edges abs_edge_itv_list
 
 let eval_abs_ed abs_edge graph_edges x_edge
 = let (abs_edge_itv_list, p, q) = abs_edge in
-  filter (lambda x: (features_belong_to_itvs_ (List.nth x_edge x) abs_edge_itv_list)) graph_edges
+  feature x_edge graph_edges abs_edge_itv_list
 
-let filt = eval_abs_ed abs_edges abs_edge0 x_edge
-
+let filt = eval_abs_ed abs_edge0 edges x_edge
 
 
 (*
