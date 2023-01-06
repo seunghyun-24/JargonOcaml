@@ -242,8 +242,9 @@ else save_subgraphs
 
 let eval_abs_graph abs_graph nodes edges op_a x_node x_edge subgraph
 = let (abs_node_list, abs_edge_list) = abs_graph in
-  let candidate_abs_edges = abs_edge_list 
-  in (save_subgraphs subgraph candidate_abs_edges [ [], [] ] filtered_edges filtered_nodes op_a)
+  let candidate_abs_edges = abs_edge_list in
+  let sub_abs_graph = [ [], [] ] 
+  in (save_subgraphs subgraph candidate_abs_edges sub_abs_graph filtered_edges filtered_nodes op_a)
 
  (* ToDo *) 
 
