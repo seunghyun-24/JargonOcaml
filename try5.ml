@@ -46,7 +46,7 @@ let eval_abs_node abs_node graph_nodes x_node
 
 let filtered_nodes = eval_abs_node abs_node0 nodes x_node
 
-
+(*
 let rec features_belong_to_itvs_e features triple_itvs (*float_list, triple list*)
 = match (features, triple_itvs) with
   | ([], [])-> true
@@ -58,7 +58,24 @@ let eval_abs_edge abs_edge graph_edges x_edge
   List.filter (fun n -> features_belong_to_itvs_e (List.nth x_edge n) abs_edge_itv_list) graph_edges
 
 let filtered_edges = eval_abs_edge abs_edge0 edges x_edge
+*)
 
+let rec feature_belong_to a b 
+= match (a, b) with
+  | ([], []) -> true
+  | (f::features', Itv (l, h) :: itvs') -> if (f < l || f > h) then false else feature_belong_to features' itvs'
+  | _ -> raise CannotBeHappened
+
+let rec feature _x_edge_list graph_edges abs_edge_itv_list
+= match _x_edge_list with
+  | [] -> graph_edges
+  | h::t -> let graph_edges = (List.filter (fun n -> feature_belong_to h abs_edge_itv_list) graph_edges) in feature t graph_edges abs_edge_itv_list
+
+let eval_abs_ed abs_edge graph_edges x_edge
+= let (abs_edge_itv_list, p, q) = abs_edge in
+  feature x_edge graph_edges abs_edge_itv_list
+
+let filtered_edges = eval_abs_ed abs_edge0 edges x_edge
 (*
 let up_case_0 nodes edges my_new_subgraph p_con q_con my_set key new_subgraphs candidate_concrete_edges abs_node_idx_to_concrete_nodes op_a _val
 = let my_new_subgraph = [ (nodes, edges) ] in
