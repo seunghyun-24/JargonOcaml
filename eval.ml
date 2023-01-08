@@ -1,22 +1,3 @@
-let abs_node_idx_to_concrete_nodes = filtered_nodes
-let abs_node_idx_to_concrete_edges = filtered_edges
-
-let eval_abs_graph abs_graph nodes edges op_a x_node x_edge 
-= let (abs_node_list, abs_edge_list) = abs_graph in
-  let candidate_abs_edges = abs_edge_list in
-  let sub_abs_graph = [ [], [] ] in
-  let subgraphs = [ ([], []) ]
-  in (save_subgraphs subgraphs candidate_abs_edges sub_abs_graph filtered_edges filtered_nodes op_a)
-
-let save_subgraphs subgraphs candidate_abs_edges sub_abs_graph filtered_edges filtered_nodes op_a
-= if (List.length candidate_abs_edges > 0 ) then
-  let (abs_edge, sub_abs_graph_edge, sub_abs_graph, case) = choose_an_abs_edge_and_update_sub_abs_graph sub_abs_graph candidate_abs_edges
-  in let candidate_abs_edges = List.tl candidate_abs_edge
-  in let subgraphs = update_subgraphs abs_edge sub_graph_node_indices subgraphs sub_abs_graph case filtered_edges filtered_nodes op_a
-  in save_subgraphs subgraphs candidate_abs_edge sub_abs_graph filtered_edges filtered_nodes op_a
-else subgraphs 
-
-
 let rec find_idx _list key idx
 = match _list with
   | h::t -> if (h = key) then idx else find_idx t key (idx+1)
@@ -106,3 +87,21 @@ upupgrade_candidate_concrete_edges num subgraphs _val op_a case p_con nodes p_su
   else upupgrade_candidate_concrete_edges num subgraphs (_val+1) op_a case p_con nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs q_con edges my_new_subgraph my_set q_sub_abs p_abs
 
 else upupgrade_subgraphs (num+1) subgraphs _val op_a case p_con nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs q_con edges my_new_subgraph my_set q_sub_abs p_abs
+(*
+let abs_node_idx_to_concrete_nodes = filtered_nodes
+let abs_node_idx_to_concrete_edges = filtered_edges
+*)
+let save_subgraphs subgraphs candidate_abs_edges sub_abs_graph filtered_edges filtered_nodes op_a
+= if (List.length candidate_abs_edges > 0 ) then
+  let (abs_edge, sub_abs_graph_edge, sub_abs_graph, case) = choose_an_abs_edge_and_update_sub_abs_graph sub_abs_graph candidate_abs_edges
+  in let candidate_abs_edges = List.tl candidate_abs_edge
+  in let subgraphs = update_subgraphs abs_edge sub_graph_node_indices subgraphs sub_abs_graph case filtered_edges filtered_nodes op_a
+  in save_subgraphs subgraphs candidate_abs_edge sub_abs_graph filtered_edges filtered_nodes op_a
+else subgraphs 
+
+let eval_abs_graph abs_graph nodes edges op_a x_node x_edge 
+= let (abs_node_list, abs_edge_list) = abs_graph in
+  let candidate_abs_edges = abs_edge_list in
+  let sub_abs_graph = [ [], [] ] in
+  let subgraphs = [ ([], []) ]
+  in (save_subgraphs subgraphs candidate_abs_edges sub_abs_graph filtered_edges filtered_nodes op_a)
