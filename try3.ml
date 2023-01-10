@@ -1,8 +1,10 @@
+exception InputError
+
 let rec read_feature oFile features 
 = try 
   let line = input_line oFile in
     read_feature oFile (features @ [[(int_of_string line)]]) 
-with x_
+with 
   End_of_file -> features 
 
 let rec read_graph_labels oFile labels 
@@ -23,6 +25,23 @@ try
 with 
   End_of_file -> indicator 
 
+let make_tuple oFileLine 
+= let rawline = input_line oFileLine in (*raw line 형태는 'int, int'*)
+  let sep = ',' in
+  let _str = String.split_on_char sep rawline in
+  match _str with
+  | h::t -> 
+    match t with
+      | h2::t -> (int_of_string h, int_of_string (String.trim h2))
+      | _ -> raise InputError
+  
+let rec read_graph_edge oFile edges
+= try
+  let line = make_tuple oFile in
+    read_graph_edge oFile (edges @ [line])
+with 
+  End_of_file -> edges
+
 let channel = open_in "MUTAG_node_labels.txt" 
 let x_node = read_feature channel []
 let nodes_len = List.length x_node
@@ -40,5 +59,11 @@ let indicator_len = List.length indicator
 let channel = open_in "MUTAG_graph_labels.txt" 
 let labels = read_graph_labels channel []
 let labels_len = List.length labels 
+
+let channel = open_in "MUTAG_A.txt"
+let edges = read_graph_edge channel []
+let edges_len = List.length edges
+
+
 
 
