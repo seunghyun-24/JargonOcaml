@@ -62,7 +62,7 @@ def update_subgraphs(abs_edge, sub_graph_node_indices, subgraphs, sub_abs_graph,
     for _, val in enumerate(candidate_concrete_edges):
       (p_con, q_con) = A[val]
       if case == 0 and p_con == nodes[p_sub_abs] and (q_con in abs_node_idx_to_concrete_nodes[q_abs]) and not (q_con in nodes):
-        my_new_subgraph = copy.deepcopy([nodes,edges])
+        _subgraph = copy.deepcopy([nodes,edges])
         my_new_subgraph[1].append((p_con, q_con))
         my_new_subgraph[0].append(q_con)
         
