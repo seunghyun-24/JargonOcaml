@@ -17,11 +17,23 @@ let abs_edge0 = ([Itv (0.0, 1.0); Itv (0.0, 1.0)] , 0, 1)
 let abs_edges = [abs_edge0]
 let abs_graph0 = [abs_nodes, abs_edges]
 
+(*
 let nodes = [0;1;2;3]
 let edges = [(0,1);(1,2);(2,3)]
 let x_node = [[0.0;0.0];[1.0;1.0];[2.0;2.0];[3.0;3.0]]
 let x_edge = [[0.0;0.0];[0.0;0.0];[0.0;0.0]]
+*)
+(*
+let nodes = [0]
+let edges = []
+let x_node = [[0.0; 0.0]]
+let x_edge = []
+*)
 
+let nodes = [0]
+let edges = [(1, 0)]
+let x_node = [[1.0; 1.0]]
+let x_edge = [[1.0; 1.0]]
 
 let rec features_belong_to_itvs features itvs 
 = match features, itvs with
@@ -34,12 +46,11 @@ let eval_abs_node abs_node graph_nodes x_node
 
 let filtered_nodes = eval_abs_node abs_node0 nodes x_node
 
-
 let rec feature_belong_to a b 
 = match (a, b) with
   | ([], []) -> true
   | (f::features', Itv (l, h) :: itvs') -> if (f < l || f > h) then false else feature_belong_to features' itvs'
-  | _ -> raise CannotBeHappened
+  | _ -> raise CannotBeHappened 
 
 let rec feature _x_edge_list graph_edges abs_edge_itv_list
 = match _x_edge_list with
@@ -67,34 +78,35 @@ let choose_an_abs_edge_and_update_sub_abs_graph sub_abs_graph (candidate_abs_edg
     let case = 2 in
     let edge_l = (edge_l)@[(p,q)] in
     let sub_abs_graph = [ node_l, edge_l ] in
-    ((p, q, idx), (find_idx node_l p idx, find_idx node_l q idx), sub_abs_graph, case)
+    ((p, q, idx), (find_idx node_l p 0, find_idx node_l q 0), sub_abs_graph, case)
 
   else if (List.mem q node_l) then
     let case = 1 in
     let node_l = (node_l)@[p] in
     let edge_l = (edge_l)@[(p,q)] in
     let sub_abs_graph = [ node_l, edge_l ] in
-    ((p, q, idx), (find_idx node_l p idx, find_idx node_l q idx), sub_abs_graph, case)
+    ((p, q, idx), (find_idx node_l p 0, find_idx node_l q 0), sub_abs_graph, case)
 
   else if (List.mem p node_l) then
     let case = 0 in
     let node_l = (node_l)@[q] in
     let edge_l = (edge_l)@[(p,q)] in
     let sub_abs_graph = [ node_l, edge_l ] in
-    ((p, q, idx), (find_idx node_l p idx, find_idx node_l q idx), sub_abs_graph, case)
+    ((p, q, idx), (find_idx node_l p 0, find_idx node_l q 0), sub_abs_graph, case)
 
   else
     let case = 3 in
     let node_l = (node_l)@[p]@[q] in
     let edge_l = (edge_l)@[(p,q)] in
     let sub_abs_graph = [ node_l, edge_l ] in
-    ((p, q, idx), (find_idx node_l p idx, find_idx node_l q idx), sub_abs_graph, case)  
+    ((p, q, idx), (find_idx node_l p 0, find_idx node_l q 0), sub_abs_graph, case)  
 
 
 let rec upupgrade_subgraphs subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num _val
 = if (List.length subgraphs > num) then 
     let new_subgraphs = upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num _val in
-    upupgrade_subgraphs subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs (num+1) _val
+    let new_subgraphs = upupgrade_subgraphs subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs (num+1) 0 in
+    new_subgraphs
   else new_subgraphs
   
 and 
@@ -147,7 +159,7 @@ let update_subgraphs abs_edge sub_graph_node_indices subgraphs sub_abs_graph cas
 = let (p_abs, q_abs, abs_edge_idx) = abs_edge in 
   let (p_sub_abs, q_sub_abs) = sub_graph_node_indices in
 
-  let my_set = [[[],[]]] in
+  let my_set = [] in
   let new_subgraphs = [[], []] in
   let candidate_concrete_edges = List.nth abs_edge_idx_to_concrete_edges abs_edge_idx in
   let new_subgraphs = upupgrade_subgraphs subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs 0 0
@@ -181,9 +193,9 @@ let eval_abs_graph abs_graph nodes edges op_a x_node x_edge
   let abs_edge_idx_to_concrete_edges = [] in
   let abs_node_idx_to_concrete_nodes = make_filtered_nodes abs_node_list nodes x_node abs_node_idx_to_concrete_nodes in
   let abs_edge_idx_to_concrete_edges = make_filtered_edges abs_edge_list edges x_edge abs_edge_idx_to_concrete_edges in
-  let sub_abs_graph = [ [], [] ] in
-  let subgraphs = [ [], [] ]
+  let sub_abs_graph = [[],[]] in
+  let subgraphs = [[],[]]
   in let subgraphs = (save_subgraphs subgraphs candidate_abs_edges sub_abs_graph abs_edge_idx_to_concrete_edges abs_node_idx_to_concrete_nodes op_a) in
   subgraphs
 
-let subgraphs = eval_abs_graph abs_graph0 nodes edges [(0,0)] x_node x_edge
+let subgraphs = eval_abs_graph abs_graph0 nodes edges [(0,0); (1,0)] x_node x_edge
