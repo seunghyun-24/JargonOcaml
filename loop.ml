@@ -28,17 +28,31 @@ let nodes = [0]
 let edges = []
 let x_node = [[0.0; 0.0]]
 let x_edge = []
-*)
+
 
 let nodes = [0]
-let edges = [(1, 0)]
+let edges = [(0, 0)]
 let x_node = [[1.0; 1.0]]
 let x_edge = [[1.0; 1.0]]
+*)
+
+let nodes = [0; 1; 2]
+let edges = [(0, 1);(1, 2)]
+let myA = [(0, 1);(1, 2)]
+let x_node = [[1.0; 1.0];[1.0; 1.0]; [10.0; 10.0]]
+let x_edge = [[1.0; 1.0];[1.0; 1.0]]
+
+(*Case 1 : (int list * (int * int) list) list = [([0; 1], [(0, 1)])]
+  Case 2 : (int list * (int * int) list) list = [([0; 1], [(1, 0)])]
+  Case 3 : (int list * (int * int) list) list = [([0; 1; 2], [(0, 1); (1, 2)])]
+  Case 4 : (int list * (int * int) list) list = [([0; 1; 2], [(0, 1); (1, 2)])]
+  
+  *)
 
 let rec features_belong_to_itvs features itvs 
 = match features, itvs with
   | ([],[]) -> true
-  | (f :: features', (*Check this*) Itv (l,h) :: itvs') -> if f < l || f > h then false else features_belong_to_itvs features' itvs'
+  | (f :: features', Itv (l,h) :: itvs') -> if f < l || f > h then false else features_belong_to_itvs features' itvs'
   | _ -> raise CannotBeHappened
 
 let eval_abs_node abs_node graph_nodes x_node 
@@ -46,10 +60,10 @@ let eval_abs_node abs_node graph_nodes x_node
 
 let filtered_nodes = eval_abs_node abs_node0 nodes x_node
 
-let rec feature_belong_to a b 
-= match (a, b) with
+let rec feature_belong_to features itvs 
+= match features, itvs with
   | ([], []) -> true
-  | (f::features', Itv (l, h) :: itvs') -> if (f < l || f > h) then false else feature_belong_to features' itvs'
+  | (f::features', Itv (l,h) :: itvs') -> if (f < l || f > h) then false else feature_belong_to features' itvs'
   | _ -> raise CannotBeHappened 
 
 let rec feature _x_edge_list graph_edges abs_edge_itv_list
@@ -58,20 +72,18 @@ let rec feature _x_edge_list graph_edges abs_edge_itv_list
   | h::t -> let graph_edges = (List.filter (fun n -> feature_belong_to h abs_edge_itv_list) graph_edges) in feature t graph_edges abs_edge_itv_list
 
 let eval_abs_edge abs_edge graph_edges x_edge
-= let (abs_edge_itv_list, p, q) = abs_edge in
-  feature x_edge graph_edges abs_edge_itv_list
+= let (abs_edge_itv_list, p, q) = abs_edge in feature x_edge graph_edges abs_edge_itv_list 
 
 let filtered_edges = eval_abs_edge abs_edge0 edges x_edge
-
 
 let rec find_idx _list key idx
 = match _list with
   | h::t -> if (List.mem key t) then find_idx t key (idx+1) else idx
-  | [] -> raise CannotBeHappened
+  | [] -> (-1)
 
 let choose_an_abs_edge_and_update_sub_abs_graph sub_abs_graph (candidate_abs_edges:triple list)
 = let ( _itv, p, q) = (List.hd candidate_abs_edges) in
-  let [ node_l, edge_l] = sub_abs_graph in
+  let [ node_l, edge_l ] = sub_abs_graph in
   let idx = List.length edge_l in
 
   if (List.mem p node_l && List.mem q node_l) then
@@ -95,7 +107,7 @@ let choose_an_abs_edge_and_update_sub_abs_graph sub_abs_graph (candidate_abs_edg
     ((p, q, idx), (find_idx node_l p 0, find_idx node_l q 0), sub_abs_graph, case)
 
   else
-    let case = 3 in
+    let case = 3 in 
     let node_l = (node_l)@[p]@[q] in
     let edge_l = (edge_l)@[(p,q)] in
     let sub_abs_graph = [ node_l, edge_l ] in
@@ -112,45 +124,48 @@ let rec upupgrade_subgraphs subgraphs candidate_concrete_edges op_a case nodes p
 and 
   
 upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num _val
-= if(List.length op_a > _val) then begin
+= if(List.length candidate_concrete_edges > _val) then begin
     let (p_con, q_con) = List.nth op_a _val in
 
-    if (case = 0 && p_con = List.nth nodes p_sub_abs && (List.mem q_con (List.nth abs_node_idx_to_concrete_nodes q_abs)) && not (List.mem q_con nodes )) then
+    if (case = 0 && p_con = List.nth nodes p_sub_abs && (List.mem q_con (List.nth abs_node_idx_to_concrete_nodes q_abs)) && (not (List.mem q_con nodes ))) then
       let e = edges@[(p_con, q_con)] in
       let n = nodes@[q_con] in
-      let my_new_subgraph = [ n, e ] in
+      let my_new_subgraph = [ nodes, edges ] in
       let key = my_new_subgraph in
-      if not (List.mem key my_set) then let my_set = my_set@[key] in let new_subgraphs = new_subgraphs @ my_new_subgraph in 
+      if (not (List.mem key my_set)) then let my_set = my_set@[key] in let new_subgraphs = new_subgraphs @ my_new_subgraph in 
         upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
       else upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
 
-    else if (case = 1 && p_con = (List.nth nodes q_sub_abs)  && List.mem p_con (List.nth abs_node_idx_to_concrete_nodes p_abs)  && not (List.mem p_con nodes )) then
+    else if (case = 1 && p_con = (List.nth nodes q_sub_abs)  && List.mem p_con (List.nth abs_node_idx_to_concrete_nodes p_abs)  && (not (List.mem p_con nodes))) then
       let e = edges@[(p_con, q_con)] in
       let n = nodes@[p_con] in
-      let my_new_subgraph = [ n, e ] in
+      let my_new_subgraph = [ nodes, edges ] in 
       let key = my_new_subgraph in
-      if not (List.mem key my_set) then let my_set = my_set@[key] in let new_subgraphs = new_subgraphs @ my_new_subgraph in 
+      if (not (List.mem key my_set)) then let my_set = my_set@[key] in let new_subgraphs = new_subgraphs @ my_new_subgraph in 
         upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
       else upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
 
     else if (case = 2 && p_con = List.nth nodes p_sub_abs && q_con = List.nth nodes q_sub_abs ) then 
       let e = edges@[(p_con, q_con)] in
-      let my_new_subgraph = [ nodes, e ] in
+      let my_new_subgraph = [ nodes, edges ] in 
       let key = my_new_subgraph in
-      if not (List.mem key my_set) then let my_set = my_set@[key] in let new_subgraphs = new_subgraphs @ my_new_subgraph in 
+      if (not (List.mem key my_set)) then let my_set = my_set@[key] in let new_subgraphs = new_subgraphs @ my_new_subgraph in 
         upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
       else upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
 
     else if (case = 3 && List.mem p_con (List.nth abs_node_idx_to_concrete_nodes p_abs)  && List.mem q_con (List.nth abs_node_idx_to_concrete_nodes q_abs) ) then 
-      let e = edges@[(p_con, q_con)] in
+      let e = edges@[(p_con, q_con)] in print_int(0);
       let n = nodes@[p_con] in
       let n = n@[q_con] in
-      let my_new_subgraph = [ n, e ] in
+      let my_new_subgraph = [ nodes, edges ] in
       let key = my_new_subgraph in
-      if not (List.mem key my_set) then let my_set = my_set@[key] in let new_subgraphs = new_subgraphs @ my_new_subgraph in 
-        upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
-      else upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
-
+      if (not (List.mem key my_set)) then 
+        let my_set = my_set@[key] in 
+        let new_subgraphs = new_subgraphs @ my_new_subgraph in 
+        let new_subgraphs = upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
+        in new_subgraphs
+      else let new_subgraphs = upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
+          in new_subgraphs
     else upupgrade_candidate_concrete_edges subgraphs candidate_concrete_edges op_a case nodes p_sub_abs abs_node_idx_to_concrete_nodes q_abs edges my_set q_sub_abs p_abs new_subgraphs num (_val+1)
   end
 else new_subgraphs
@@ -198,4 +213,4 @@ let eval_abs_graph abs_graph nodes edges op_a x_node x_edge
   in let subgraphs = (save_subgraphs subgraphs candidate_abs_edges sub_abs_graph abs_edge_idx_to_concrete_edges abs_node_idx_to_concrete_nodes op_a) in
   subgraphs
 
-let subgraphs = eval_abs_graph abs_graph0 nodes edges [(0,0); (1,0)] x_node x_edge
+let subgraphs = List.tl (eval_abs_graph abs_graph0 nodes edges [(0,1); (1,2)] x_node x_edge)
