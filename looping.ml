@@ -85,7 +85,7 @@ let rec construct_subgraphs first_nodes_list =
     else if (List.mem q node_l) then
       let case = 1 in
       let node_l = (node_l)@[p] in
-      let edge_l = (edge_l)@[(p,q)] in
+      let edge_l = (edge_l)@[(p,q)] in 
       let sub_abs_graph = [ node_l, edge_l ] in
       ((p, q, idx), (find_idx node_l p 0, find_idx node_l q 0), sub_abs_graph, case)
   
@@ -99,8 +99,9 @@ let rec construct_subgraphs first_nodes_list =
     else
       let case = 3 in 
       let node_l = (node_l)@[p]@[q] in
+      print_int(3);
       let edge_l = (edge_l)@[(p,q)] in
-      let sub_abs_graph = [ node_l, edge_l ] in
+      let sub_abs_graph = [ node_l, edge_l ] in 
       ((p, q, idx), (find_idx node_l p 0, find_idx node_l q 0), sub_abs_graph, case)  
 
 
@@ -171,7 +172,7 @@ let rec update_subgraphs_set subgraphs_set candidate_abs_edges sub_abs_graph abs
     (*update subAbsGraph*)
     let ( _head, sub_abs_graph_edge, sub_abs_graph, case) = choose_an_abs_edge_and_update_sub_abs_graph sub_abs_graph abs_edge
     (*update subgraphs in subgraphs_set*)
-    in let subgraphs_set = update_subgraphs _head sub_abs_graph_edge subgraphs_set sub_abs_graph case abs_node_idx_to_concrete_nodes abs_edge_idx_to_concrete_edges myA
+    in let subgraphs_set = update_subgraphs _head sub_abs_graph_edge subgraphs_set sub_abs_graph case abs_node_idx_to_concrete_nodes abs_edge_idx_to_concrete_edges myA;
     in update_subgraphs_set subgraphs_set tail sub_abs_graph abs_graph abs_node_idx_to_concrete_nodes abs_edge_idx_to_concrete_edges myA
 
 
@@ -207,33 +208,35 @@ let eval_abs_graph abs_graph nodes edges myA x_node x_edge
   let subgraphs = (save_subgraphs subgraphs candidate_abs_edges sub_abs_graph abs_edge_idx_to_concrete_edges abs_node_idx_to_concrete_nodes op_a) in
   1*)
   (*subgraphs*)
-let myA = [(0,1); (3,2); (4,5); (5,6); (7,8); (8,9)]
-let x_node = [[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[10.0; 10.0]]
+let myA = [(0,1); (1,2); (4,5); (5,6); (7,8); (8,9)]
+(*let x_node = [[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[10.0; 10.0]]
+*)
+let x_node = [[1.0; 1.0];[1.0; 1.0];[10.0; 10.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[10.0; 10.0]]
 let x_edge = [[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0];[1.0; 1.0]]
 
 (*Case 1*)
-let nodes = [0;1]
-let edges = [0]
+let nodes = [0;1;2;3]
+let edges = [0;1]
 
 let case1 = List.tl (eval_abs_graph abs_graph0 nodes edges myA x_node x_edge)
 
 (*Case 2*)
-let nodes = [2;3]
-let edges = [1]
+let nodes = [4;5]
+let edges = [2]
 
 let case2 = List.tl (eval_abs_graph abs_graph0 nodes edges myA x_node x_edge)
 
 (*Case 3*)
 let nodes = [4;5;6]
-let edges = [2;3]
+let edges = [3;4]
 
 let case3 = List.tl (eval_abs_graph abs_graph0 nodes edges myA x_node x_edge)
-
+(*
 let nodes = [7;8;9]
 let edges = [4;5]
 
 let case4 = List.tl (eval_abs_graph abs_graph0 nodes edges myA x_node x_edge)
-
+*)
 (* construct ~ 있을 때
 # case1;;
 - : (int list * (int * int) list) list =

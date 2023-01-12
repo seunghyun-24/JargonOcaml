@@ -62,7 +62,7 @@ let labels_len = List.length labels
 
 let channel = open_in "MUTAG_A.txt"
 let myA = read_graph_edge channel []
-let myA = List.length myA
+let myA_len = List.length myA
 
 
 
