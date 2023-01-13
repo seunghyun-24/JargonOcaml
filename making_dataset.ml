@@ -84,18 +84,18 @@ let rec couting_graph_num indicator num
 let graph_num = couting_graph_num indicator 1
 
 let rec make_node first final list
-= if(first = final) then list@[first]
-else make_node (first+1) final (list@[first])
+= if(first = final) then list@[first-1]
+else make_node (first+1) final (list@[first-1])
 
-let rec make_edge (first:int) (final:int) (myA:(int*int) list) list
+let rec make_edge (first:int) (final:int) (myA:(int*int) list) list a
 = match myA with 
   | [] -> list
-  | (e1,e2)::t -> if( (first<e1) && (final >= e1) && (first<e2) && (final >= e2) ) then make_edge first final t list@[(e1, e2)]
-  else make_edge first final t list
+  | (e1,e2)::t -> if( (first<e1) && (final >= e1) && (first<e2) && (final >= e2) ) then make_edge first final t (list@[a]) (a+1)
+  else make_edge first final t list (a+1)
 
 let make_ num myA graph_list cnt lcnt
 = let n = make_node (lcnt+1) cnt [] in
-  let e = make_edge lcnt cnt myA [] in
+  let e = make_edge lcnt cnt myA [] lcnt in
   let newGraph = (n,e) in graph_list@[newGraph]
 
 let rec making_graph_edge indicator myA graph_list cnt lcnt
