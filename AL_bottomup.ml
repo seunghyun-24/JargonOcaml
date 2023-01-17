@@ -1,24 +1,26 @@
 let tmp_candidate current_abs_edges reachable
 = match current_abs_edges with
-  | [(), ()] -> true
-  | (current_abs_edges_e1, current_abs_edges_e2)::tl -> 
+  | [] -> true
+  | (_itv, current_abs_edges_e1, current_abs_edges_e2)::tl -> 
     if (List.mem current_abs_edges_e1 reachable || List.mem current_abs_edges_e2 reachable) then false
     else true
 
 let tmp_reverse_candidate current_abs_edges reachable
-  = match current_abs_edges with
-    | [(), ()] -> false
-    | (current_abs_edges_e1, current_abs_edges_e2)::tl -> 
-      if (List.mem current_abs_edges_e1 reachable || List.mem current_abs_edges_e2 reachable) then true
-      else false
+= match current_abs_edges with
+  | [] -> false
+  | (_itv, current_abs_edges_e1, current_abs_edges_e2)::tl -> 
+    if (List.mem current_abs_edges_e1 reachable || List.mem current_abs_edges_e2 reachable) then true
+    else false
+
 
 let rec trim_candidates candidates new_abs_edges current_abs_edges reachable 
 = if(List.length candidates  > 0) then
     let reachable = List.filter (fun n -> tmp_reverse_candidate current_abs_edges reachable) candidates in
-    let new_abs_edges = List.filter (fun n -> tmp_reverse_candidate current_abs_edges reachable ) candidates in  
+    let new_abs_edges = List.filter (fun n -> tmp_reverse_candidate current_abs_edges reachable) candidates in  
     let candidates = List.filter (fun n -> tmp_candidate current_abs_edges reachable) candidates in
-    trim_candidates candidates new_abs_edges current_abs_edges reachable 
-else (candidates, new_abs_edges, reachable)
+    let (candidates, new_abs_edges, reachable) = trim_candidates candidates new_abs_edges current_abs_edges reachable 
+  in (candidates, new_abs_edges, reachable)
+  else (candidates, new_abs_edges, reachable)
 
 
 let sort_abs_graph_edges abs_graph
@@ -28,7 +30,7 @@ let sort_abs_graph_edges abs_graph
   let new_abs_edges = List.hd current_abs_edges in
 
   let reachable = [[],[]] in
-  let (current_abs_edges_e1, current_abs_edges_e2) = new_abs_edges in
+  let ( _itv, current_abs_edges_e1, current_abs_edges_e2) = new_abs_edges in
   let reachable = reachable @ [current_abs_edges_e1, current_abs_edges_e2] in
   let reachable = List.tl reachable in
 
