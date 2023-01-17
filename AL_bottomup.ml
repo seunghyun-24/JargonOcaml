@@ -68,10 +68,10 @@ in new_abs_graph
 
 
 let rec remove_left_graphs 
-= let graph = (remove 기능 구현) in
+= let left_graph = (remove 기능 구현) in
   let graph = btm_up_graph_chooser_from_big
   let abs_graph = construct_absgraph_BBBP
-in graph
+in left_graphs
 
 
 let rec update_left_graphs
@@ -88,7 +88,7 @@ let rec update_left_graphs
 
     if(score < default_score * expected || List.length chosen_train_graphs = 1) then
       print_int(0);
-      let graph = remove_left_graphs 
+      let left_graphs = remove_left_graphs 
       update_left_graphs 
     else 
       let chosen_graphs = eval_abs_graph_on_graphs_exist 
