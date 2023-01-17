@@ -1,15 +1,25 @@
-let trim_candidates tmp_candidate
-= if(List.length tmp_candidate > 0) then
-    let [current_abs_edges_e1, current_abs_edges_e2] = current_abs_  
+let tmp_candidate current_abs_edges reachable
+= match current_abs_edges with
+  | [(), ()] -> true
+  | (current_abs_edges_e1, current_abs_edges_e2)::tl -> 
+    if (List.mem current_abs_edges_e1 reachable || List.mem current_abs_edges_e2 reachable) then false
+    else true
 
+let tmp_reverse_candidate current_abs_edges reachable
+  = match current_abs_edges with
+    | [(), ()] -> false
+    | (current_abs_edges_e1, current_abs_edges_e2)::tl -> 
+      if (List.mem current_abs_edges_e1 reachable || List.mem current_abs_edges_e2 reachable) then true
+      else false
 
+let rec trim_candidates candidates new_abs_edges current_abs_edges reachable 
+= if(List.length candidates  > 0) then
+    let reachable = List.filter (fun n -> tmp_reverse_candidate current_abs_edges reachable) candidates in
+    let new_abs_edges = List.filter (fun n -> tmp_reverse_candidate current_abs_edges reachable ) candidates in  
+    let candidates = List.filter (fun n -> tmp_candidate current_abs_edges reachable) candidates in
+    trim_candidates candidates new_abs_edges current_abs_edges reachable 
+else (candidates, new_abs_edges, reachable)
 
-let rec tmp_candidate candidates 
-= if (List.length candidates > 0) then
-  let tmp_candidate = candidates in
-  let candidates = trim_candidates tmp_candidate in
-  candidates 
-else candidates
 
 let sort_abs_graph_edges abs_graph
 = let [abs_node, abs_edge] = abs_graph in
@@ -17,15 +27,15 @@ let sort_abs_graph_edges abs_graph
   let candidate_edges = current_abs_edges in
   let new_abs_edges = List.hd current_abs_edges in
 
-  let reachable = [ [], [] ] in
+  let reachable = [[],[]] in
   let (current_abs_edges_e1, current_abs_edges_e2) = new_abs_edges in
-  let reachable = reacuable @ [current_abs_edges_e1, current_abs_edges_e2] in
+  let reachable = reachable @ [current_abs_edges_e1, current_abs_edges_e2] in
   let reachable = List.tl reachable in
 
   let candidates = current_abs_edges in
   let candidates = List.tl candidates in
 
-  let candidates = tmp_candidate candidates in (*filter 쓰는게 나을 듯*)
+  let (candidates, new_abs_edges, reachable) = trim_candidates candidates new_abs_edges current_abs_edges reachable in (*filter 쓰는게 나을 듯*)
   
   let new_abs_graph = [abs_node, new_abs_edges] 
 in new_abs_graph
@@ -33,7 +43,7 @@ in new_abs_graph
 
 
 
-
+(*
 let rec remove_left_graphs 
 = let graph = (remove 기능 구현) in
   let graph = btm_up_graph_chooser_from_big
@@ -70,4 +80,4 @@ let learn_abs_graphs_bottom_up
 = let default_score = (List.length labeled_graphs + List.length train_graphs) / List.length train_graphs in
   let learned_parameters = [] in
   let learned_parameters = update_abs_graphs 
-in learned_parameters 
+in learned_parameters *)
