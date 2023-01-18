@@ -65,13 +65,13 @@ in new_abs_graph
 
 (* sort_abs_graph_edges 함수 끝 *)
 
+(* 
 let in_make_nodes abs_edges nodes
 = match abs_edges with 
   | [] -> nodes
   | (_itv, fi, ti)::t -> in_make_nodes t (nodes@[fi]@[ti])
 
-let let_us_DFS src edges 
-= 
+let let_us_DFS src edges
 
 let isConnected graph
 = let (nodes, edges) = graph in
@@ -130,8 +130,10 @@ let rec not_connected_abs_graph
   let abs_graph = construct_absgraph_BBBP
 in (left_graphs, graph, abs_graph)
 else (left_graphs, graph, abs_graph)
+*)
 
-let make_graphs_len_list left_graphs graphs graphs_len_list 
+(*btm_up_graph_chooser_from_middle*)
+let rec make_graphs_len_list left_graphs graphs graphs_len_list 
 = match left_graphs with
   | [] -> graphs_len_list 
   | (n,e)::t -> let graphs_len_list = graphs_len_list@[(List.length graphs_len_list), List.length e]
@@ -141,41 +143,140 @@ let btm_up_graph_chooser_from_middle left_graphs graphs
 = let graphs_len_list = [] in
   let graphs_len_list = make_graphs_len_list left_graphs graphs graphs_len_list in
   let graphs_len_list_sorted = List.sort (fun (k1, v1) (k2, v2) -> match compare v1 v2 with | 0 -> compare k1 k2 | c -> c) graphs_len_list in
-  let (graph_idx, graph_len) = List.nth graphs_len_list_sorted (int (List.length left_graphs)/2) 
+  let (graph_idx, graph_len) = List.nth graphs_len_list_sorted ((List.length left_graphs)/2)
 in graph_idx
+(*btm_up_graph_chooser_from_middle 끝*)
 
-let rec feat_val_abs_node node_feature abs_node num
-= match node_feature with
-| [] -> abs_node 
-| h::t -> let abs_node = abs_node@(num, num) in feat_val_abs_node t abs_node (num+1)
+(*construct_absgraph_undirected*)
+let rec feat_val_abs_ne ne_feature abs_
+= match ne_feature with
+  | [] -> abs_
+  | h::t -> let abs_ = abs_@[(h,h)] in feat_val_abs_ne t abs_
 
-let rec make_absNode abs_nodes
-= let node_feature = List.mem x_node val_ in
-  let abs_node = [] in
-  let abs_node = feat_val_abs_node node_feature abs_node 0 in
-  let abs_nodes = abs_nodes@abs_node in
+let rec saving_like_array _index _saving _list cnt
+= match _list with
+  | [] -> if(cnt=_index) then _list@[_saving]
+  else saving_like_array _index _saving (_list@[]) (cnt+1)
+  | h::t -> if(cnt=_index) then [_saving]@t 
+  else h::(saving_like_array _index _saving t (cnt+1))
 
+let rec enum_graph_idx idx find_node abs_nodes node_abs_node_map x_node
+= match find_node with
+  | [] -> (abs_nodes, node_abs_node_map)
+  | h::t -> 
+    let node_feature = List.nth x_node h in
+    let abs_node = [] in
+    let abs_node = feat_val_abs_ne node_feature abs_node in
+    let node_abs_node_map = saving_like_array idx h node_abs_node_map 0 in
+    enum_graph_idx (idx+1) t (abs_nodes@abs_node) node_abs_node_map x_node
 
+let rec saving_abs_edges find_edge abs_edges myA x_edge node_abs_node_map
+= match find_edge with
+  | [] -> abs_edges 
+  | h::t -> 
+    let (from_node, to_node) = List.nth myA h in
+    let new_itv = [] in
+    let edge_feature = List.nth x_edge h in
+    let new_itv =  feat_val_abs_ne edge_feature new_itv in
+    let abs_edge = (new_itv, List.nth node_abs_node_map from_node, List.nth node_abs_node_map to_node) in
+    if(to_node > from_node) then let abs_edges = abs_edges@[abs_edge] in saving_abs_edges t abs_edges myA x_edge node_abs_node_map
+    else saving_abs_edges t abs_edges myA x_edge node_abs_node_map
 
-
-let construct_absgraph_undirected 
+let construct_absgraph_undirected graph_idx my_maps graphs x_node
 = let abs_nodes = [] in
   let abs_edges = [] in
   let node_abs_node_map = [] in
 
   let (find_node, find_edge) = List.nth graphs graph_idx in
-  let abs_nodes = make_absNode
+  let (abs_nodes, node_abs_node_map) = enum_graph_idx 0 find_node abs_nodes node_abs_node_map x_node in
+  let abs_edges = saving_abs_edges find_edge abs_edges
+in (abs_nodes, abs_edges)
+(*construct_absgraph_undirected 끝*)
+
+(*generalize*)
+  (* eval_abs_graph_DFS *)
+let enu_itv itvs x_edge edge
+= match itvs with
+  | [] -> true
+  | h::t -> let (bot, top) = List.nth itvs h in
+  if(List.nth (List.nth x_edge edge) h < bot || top < List.nth (List.nth x_edge edge)) then false
+  else enu_itv t x_edge edge
+
+let concrete_edge_belong_abs_edge abs_edge edge x_edge
+= let (itvs, p, q) = abs_edge in
+  enu_itv itvs x_edge edge
+
+let concrete_edge_belong_abs_node abs_node node x_node
+= enu_itv abs_node x_node node
 
 
-in [abs_nodes, abs_edges]
+let eval_abs_graph_DFS
+= let (nodes, edges) = graph in
+  let (absNodes, absEdges) = abs_graph in
+  let abs_edge_first = List.hd absEdges in
+  let (abs_node_fr, abs_node_to) = abs_edge_first in
+  let candidate_edges = [] in
+  
 
-let rec update_left_graphs
+  (* eval_abs_graph_DFS *)
+
+let rec make_cic_set idx graphs abs_edges_len labeled_graphs train_graphs correct_set incorrect_set
+= match graphs with
+  | [] -> (correct_set, incorrect_set)
+  | h::t -> if not(List.mem idx train_graphs) then make_cic_set (idx+1) t abs_edges_len labeled_graphs train_graphs correct_set incorrect_set
+  else let (nodes, edges) = h in let edges_len = List.length edges in
+  if (abs_edges_len > edges_len) then make_cic_set (idx+1) t abs_edges_len labeled_graphs train_graphs correct_set incorrect_set
+  else let exists = eval_abs_graph_DFS in
+  if(exists) then 
+    if (List.mem idx labeled_graphs) then let correct_set = correct_set@[idx] in make_cic_set (idx+1) t abs_edges_len labeled_graphs train_graphs correct_set incorrect_set
+    else let incorrect_set = incorrect_set@[idx] in make_cic_set (idx+1) t abs_edges_len labeled_graphs train_graphs correct_set incorrect_set
+  else make_cic_set (idx+1) gt abs_edges_len labeled_graphs train_graphs correct_set incorrect_set
+
+let rec check_same_thing (nodes, edges) correct_set
+= match correct_set with
+  | [] -> false
+  | h::t -> if(List.mem h nodes || List.mem h edges) then true
+  else check_same_thing (nodes, edges) t 
+
+let eval_abs_graph_on_graphs_GC graphs abs_edges_len labeled_graphs left_graphs
+= let (absNodes, absEdges) = abs_graph in
+  let correct_set = [] in
+  let incorrect_set = [] in
+  let abs_edges_len = List.length absEdges in
+  let (correct_set, incorrect_set) = make_cic_set 0 graphs abs_edges_len labeled_graphs train_graphs correct_set incorrect_set in
+  if not (check_same_thing left_graph correct_set) then 0
+  else (List.length correct_set / (List.length correct_set + List.length incorrect_set + 1))
+
+
+let enumerate_and_remove_edges_aggressive
+
+let generalize_edge_intervals_to_top 
+
+let generalize_node_intervals_to_top
+
+let refine 
+
+let generalize abs_graph graphs labeled_graphs left_graphs train_graphs my_maps
+= let best_abs_graph = abs_graph in
+  let (absNodes, absEdges) = best_abs_graph in
+  let edge_idx = List.length absEdges -1 in
+  let best_score = eval_abs_graph_on_graphs_GC graphs abs_edges_len labeled_graphs left_graphs
+  let (best_abs_graph, best_score) = enumerate_and_remove_edges_aggressive
+  let best_abs_graph = sort_abs_graph_edges best_abs_graph in
+  let (best_abs_graph, best_score) = generalize_edge_intervals_to_top 
+  let (best_abs_graph, best_score) = generalize_node_intervals_to_top
+  let (best_abs_graph, best_score) = refine 
+in best_abs_graph
+
+(*generalize 끝*)
+
+let rec update_left_graphs left_graphs graphs my_maps
 = if (List.length left_graphs > 0) then
-    let graph = btm_up_graph_chooser_from_middle
-    let abs_graph = construct_absgraph_undirected 
-
-    let (left_graphs, graph, abs_graph) = not_connected_abs_graph 
-
+    let graph_idx = btm_up_graph_chooser_from_middle left_graphs graphs
+    let abs_graph = construct_absgraph_undirected graph_idx my_maps graphs x_node
+  
+    (*let (left_graphs, graph, abs_graph) = not_connected_abs_graph*) 
+  
     let learned_abs_graph = generalize 
 
     let score = eval_abs_graph_on_graphs_GC
@@ -193,8 +294,8 @@ let rec update_left_graphs
 in learned_parameters
 
 
-let learn_abs_graphs_bottom_up 
+let learn_abs_graphs_bottom_up labeled_graphs train_graphs left_graphs graphs my_maps
 = let default_score = (List.length labeled_graphs + List.length train_graphs) / List.length train_graphs in
   let learned_parameters = [] in
-  let learned_parameters = update_left_graphs
+  let learned_parameters = update_left_graphs left_graphs graphs my_maps
 in learned_parameters 
