@@ -8,12 +8,12 @@ def learn_abs_graphs_bottom_up(parameter, my_maps):
     abs_graph = constructAbsGraphUndirected(parameter, graph, my_maps)
     
     while(my_connect(abs_graph) == False):
-      print("Is not connected Initial!!!")
-      print("Not connected Graph : {}".format(graph))
-      parameter.left_graphs.remove(graph)
-      graph = btm_up_graph_chooser_from_big(parameter.left_graphs, parameter.graphs)
-      abs_graph = constructAbsGraphBBBP(parameter, graph)
-      print(my_connect(abs_graph))
+        print("Is not connected Initial!!!")
+        print("Not connected Graph : {}".format(graph))
+        parameter.left_graphs.remove(graph)
+        graph = btm_up_graph_chooser_from_big(parameter.left_graphs, parameter.graphs)
+        abs_graph = constructAbsGraphBBBP(parameter, graph)
+        print(my_connect(abs_graph))
       
     print("Given graph")
     print("Nodes : {}".format(parameter.graphs[graph][0]))
@@ -35,9 +35,9 @@ def learn_abs_graphs_bottom_up(parameter, my_maps):
     chosen_train_graphs = eval_abs_graph_on_graphs_exist(learned_abs_graph, parameter.graphs, my_maps) & parameter.train_graphs
     
     if (score < default_score * parameter.expected) or (len(chosen_train_graphs) == 1):
-      print("This learning failed!!")
-      parameter.left_graphs.remove(graph)
-      continue
+        print("This learning failed!!")
+        parameter.left_graphs.remove(graph)
+        continue
     chosen_graphs = eval_abs_graph_on_graphs_exist(learned_abs_graph, parameter.graphs, my_maps)
     print()
     print("Covered graphs : {}".format(chosen_graphs))
@@ -78,3 +78,214 @@ def sort_abs_graph_edges(abs_graph):
   new_abs_graph.absEdges = new_absEdges 
   
   return new_abs_graph
+
+
+
+
+
+def refine(abs_graph, parameter, my_maps, current_score) :
+      current_abs_graph = abs_graph
+  current_score = current_score
+
+  best_abs_graph = abs_graph
+  best_score = current_score
+
+  flag = False
+
+  #'''
+  print("Widening node intervals")
+  #widening node intervals
+  original_node_len = len(abs_graph.absNodes)
+  #node_idx = len(abs_graph.absNodes) - 1
+  #while(node_idx >= 0):
+  for node_idx in range(len(abs_graph.absNodes)):
+    itvs = current_abs_graph.absNodes[node_idx]
+    if itvs == {}:
+      continue
+    else:
+      for _, feat_idx in enumerate(itvs):
+        (a, b) = itvs[feat_idx]
+        if a != -99 and b != 99:
+          new_abs_graph = copy.deepcopy(current_abs_graph)
+          new_itvs = copy.deepcopy(itvs)
+          new_itvs[feat_idx] = (a,99)
+          new_abs_graph.absNodes[node_idx] = new_itvs
+
+          new_score = eval_abs_graph_on_graphs_GC(new_abs_graph, parameter.graphs, parameter.labeled_graphs, parameter.left_graphs, parameter.train_graphs, my_maps)
+          if (new_score >= best_score):
+            flag = True
+            best_abs_graph = new_abs_graph
+            best_score = new_score
+          if (new_score > best_score):
+            print()
+            print("NewAbsGraph")
+            print(new_abs_graph.absNodes)
+            print(new_abs_graph.absEdges)
+            print()
+            print("New Score : {}".format(new_score))
+
+          new_abs_graph = copy.deepcopy(current_abs_graph)
+          new_itvs = copy.deepcopy(itvs)
+          new_itvs[feat_idx] = (-99,b)
+          new_abs_graph.absNodes[node_idx] = new_itvs
+
+          new_score = eval_abs_graph_on_graphs_GC(new_abs_graph, parameter.graphs, parameter.labeled_graphs, parameter.left_graphs, parameter.train_graphs, my_maps)
+          if (new_score >= best_score):
+            flag = True
+            best_abs_graph = new_abs_graph
+            best_score = new_score
+          if (new_score > best_score):
+            print()
+            print("NewAbsGraph")
+            print(new_abs_graph.absNodes)
+            print(new_abs_graph.absEdges)
+            print()
+            print("New Score : {}".format(new_score))
+
+        elif (a != -99 and b == 99) or (a == -99 and b != 99):
+          new_abs_graph = copy.deepcopy(current_abs_graph)
+          new_itvs = copy.deepcopy(itvs)
+          new_itvs[feat_idx] = (-99,99)
+          new_abs_graph.absNodes[node_idx] = new_itvs
+
+          new_score = eval_abs_graph_on_graphs_GC(new_abs_graph, parameter.graphs, parameter.labeled_graphs, parameter.left_graphs, parameter.train_graphs, my_maps)
+          if (new_score >= best_score):
+            flag = True
+            best_abs_graph = new_abs_graph
+            best_score = new_score
+          if (new_score > best_score):
+            print()
+            print("NewAbsGraph")
+            print(new_abs_graph.absNodes)
+            print(new_abs_graph.absEdges)
+            print()
+            print("New Score : {}".format(new_score))
+  
+        else:
+          continue
+
+    #node_idx = node_idx - 1
+
+
+  print("Widening edge intervals")
+  #widening edge intervals
+  original_edge_len = len(abs_graph.absEdges)
+  #edge_idx = len(abs_graph.absEdges) - 1
+  #while(edge_idx >= 0):
+  for edge_idx in range(len(abs_graph.absEdges)):
+    (itvs, p, q) = current_abs_graph.absEdges[edge_idx]
+    if itvs == {}:
+      continue
+    else:
+      for _, feat_idx in enumerate(itvs):
+        (a, b) = itvs[feat_idx]
+        if a != -99 and b != 99:
+          new_abs_graph = copy.deepcopy(current_abs_graph)
+          new_itvs = copy.deepcopy(itvs)
+          new_itvs[feat_idx] = (a,99)
+          new_abs_graph.absEdges[edge_idx] = (new_itvs, p, q)
+
+          new_score = eval_abs_graph_on_graphs_GC(new_abs_graph, parameter.graphs, parameter.labeled_graphs, parameter.left_graphs, parameter.train_graphs, my_maps)
+          if (new_score >= best_score):
+            flag = True
+            best_abs_graph = new_abs_graph
+            best_score = new_score
+          if (new_score > best_score):
+            print()
+            print("NewAbsGraph")
+            print(new_abs_graph.absNodes)
+            print(new_abs_graph.absEdges)
+            print()
+            print("New Score : {}".format(new_score))
+
+
+          new_abs_graph = copy.deepcopy(current_abs_graph)
+          new_itvs = copy.deepcopy(itvs)
+          new_itvs[feat_idx] = (-99,b)
+          new_abs_graph.absEdges[edge_idx] = (new_itvs, p, q)
+
+          new_score = eval_abs_graph_on_graphs_GC(new_abs_graph, parameter.graphs, parameter.labeled_graphs, parameter.left_graphs, parameter.train_graphs, my_maps)
+          if (new_score >= best_score):
+            flag = True
+            best_abs_graph = new_abs_graph
+            best_score = new_score
+          if (new_score > best_score):
+            print()
+            print("NewAbsGraph")
+            print(new_abs_graph.absNodes)
+            print(new_abs_graph.absEdges)
+            print()
+            print("New Score : {}".format(new_score))
+
+        
+
+        elif (a != -99 and b == 99) or (a == -99 and b != 99):
+
+          new_abs_graph = copy.deepcopy(current_abs_graph)
+          new_itvs = copy.deepcopy(itvs)
+          new_itvs[feat_idx] = (-99,99)
+          new_abs_graph.absEdges[edge_idx] = (new_itvs, p, q)
+
+          new_score = eval_abs_graph_on_graphs_GC(new_abs_graph, parameter.graphs, parameter.labeled_graphs, parameter.left_graphs, parameter.train_graphs, my_maps)
+          if (new_score >= best_score):
+            flag = True
+            best_abs_graph = new_abs_graph
+            best_score = new_score
+          if (new_score > best_score):
+            print()
+            print("NewAbsGraph")
+            print(new_abs_graph.absNodes)
+            print(new_abs_graph.absEdges)
+            print()
+            print("New Score : {}".format(new_score))
+     
+        else:
+          continue
+    #edge_idx = edge_idx - 1 
+  #'''    
+  print("Removing edge")
+  #remove edge
+  original_edge_len = len(abs_graph.absEdges)
+  edge_idx = len(abs_graph.absEdges) - 1
+  while(edge_idx >= 0):
+
+    new_abs_graph = copy.deepcopy(current_abs_graph)
+    new_abs_graph.absEdges.pop(edge_idx)
+     
+    if not (my_connect(new_abs_graph)) : 
+      edge_idx = edge_idx - 1
+      continue
+
+    new_abs_graph =  sort_abs_graph_edges(new_abs_graph)
+
+    new_score = eval_abs_graph_on_graphs_GC(new_abs_graph, parameter.graphs, parameter.labeled_graphs, parameter.left_graphs, parameter.train_graphs, my_maps)
+    if (new_score >= best_score):
+      flag = True
+      print("edge_idx : {}".format(edge_idx))
+      best_abs_graph = new_abs_graph
+      best_score = new_score
+      if (new_score > best_score):
+        print()
+        print("NewAbsGraph")
+        print(new_abs_graph.absNodes)
+        print(new_abs_graph.absEdges)
+        print()
+        print("New Score : {}".format(new_score))
+
+    #else:
+    #  print()
+    #  print("No!!!!!!! Abort!")
+    #  print()
+    edge_idx = edge_idx - 1
+
+  if flag == False :
+    print()
+    print()
+    print("No better absgraph")
+    print()
+    print()
+    return (best_abs_graph, best_score)
+
+  else:
+    return refine(best_abs_graph, parameter, my_maps, best_score)
+ 
