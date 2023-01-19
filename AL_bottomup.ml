@@ -464,7 +464,60 @@ let generalize_node_intervals_to_top
   let (best_abs_graph, best_score) = remove_node
   
   (*refine*)
+let rec enu_itvs itvs
+= match itvs with 
+  | [] ->
+  | h::t -> 
+    let (newAbsNodes, newAbsEdges) = new_abs_grpah in
+    let (a,b) = List.nth h itvs in
+  if ( a != -99 && b != 99 ) then
+    let new_abs_graph = current_abs_graph in
+    let new_itvs = itvs in
+    let new_itvs = saving_like_array feat_idx (a,99) new_itvs 0 in
+    let newAbsNode = saving_like_array node_idx new_itvs newAbsNodes 0 in
+    let new_score = eval_abs_graph_on_graphs_GC  in
+
+    if (new_score >= best_score) then 
+      let flag = true in
+      let best_abs_graph = new_abs_graph in
+      let best_score = new_score in
+      enu_itvs2
+
+    else if ((a != -99 && b == 99) || (a == -99 && b != 99))
+
+and
+
+enu_itvs2 
+= let new_abs_graph = current_abs_graph in
+  let new_itvs = itvs in
+  let new_itvs = saving_like_array feat_idx (-99,b) new_itvs 0 in
+  let newAbsNode = saving_like_array node_idx new_itvs newAbsNodes 0 in
+  let new_score = eval_abs_graph_on_graphs_GC new_abs_graph graphs labeled_graphs left_graphs train_graphs  in
+  if (new_score >= best_score ) then
+    let flag = True in
+    let best_abs_graph = new_abs_graph in
+    let best_score = new_score 
+
+
+let rec range_absNodes absNodes
+= match absNodes with
+  | [] -> 
+  | h::t -> 
+    let (absNodes, absEdges) = current_abs_graph in
+    let itvs = List.nth absNodes node_idx in
+    if (List.empty itvs) range_absNodes t
+    else enu_itvs itvs
+
 let refine 
+= let current_abs_graph = abs_graph in
+  let best_abs_graph = abs_graph in
+  let best_score = current_score in
+  let flag = False in
+  let (absNodes, absEdges) = abs_graph in
+  let original_node_len = List.length absNodes in
+  let (absNodes, absEdges) = abs_graph in
+  let  = range_absNodes absNodes
+  
   (*refine 끝*)
 
 let generalize abs_graph graphs labeled_graphs left_graphs train_graphs my_maps
