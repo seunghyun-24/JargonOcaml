@@ -209,15 +209,44 @@ let concrete_edge_belong_abs_edge abs_edge edge x_edge
 let concrete_edge_belong_abs_node abs_node node x_node
 = enu_itv abs_node x_node node
 
+let rec condition_candidate_edges candidate_edges edges abs_edge_first edge x_edge myA absNode abs_node_fr abs_node_to x_node 
+= match edges with
+  | [] -> candidate_edges
+  | h::t -> let cond1 = concrete_edge_belong_abs_edge abs_edge_first h x_edge in
+  let (e1, e2) = List.nth myA h in
+  let cond2 = concrete_edge_belong_abs_node (List.nth absNodes abs_node_fr) e1 x_node in
+  let cond3 = concrete_edge_belong_abs_node (List.nth absNodes abs_node_to) e2 x_node in
+  if (cond1 && cond2 && cond3) then let candidate_edges = candidate_edges@[h] in condition_candidate_edges candidate_edges t abs_edge_first edge x_edge myA absNode abs_node_fr abs_node_to x_node 
+  else condition_candidate_edges candidate_edges t abs_edge_first edge x_edge myA absNode abs_node_fr abs_node_to x_node 
 
-let eval_abs_graph_DFS
+let  exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge
+= let (absNodes, absEdges) = abs_graph in
+  if (List.length absEdges = abs_edge_idx) then false 
+  else let target_abs_edge = 
+
+
+let rec checking_exist_subgraph_DFS candidate_edges abs_node_fr abs_node_to sub_abs_graph_edge myA init_graph_edge subgraph 
+= match candidate_edges with
+  | [] -> false
+  | h::t -> let abs_node_idx_to_concrete_node = [] in let abs_node_idx_to_concrete_edge = [] in
+  let sub_abs_graph_edge = (abs_node_fr, abs_node_to) in let sub_ags_graph = [[abs_node_fr, abs_node_to], [sub_abs_graph_edge]] in
+  let subgraph = [] in let (e1, e2) = List.nth myA init_graph_edge in let subgraph = subgraph @ [[e1@[e2]], init_graph_edge] in
+  let abs_node_idx_to_concrete_edge = saving_like_array 0 init_graph_edge abs_node_idx_to_concrete_edge 0 in
+  let abs_node_idx_to_concrete_ndoe = saving_like_array abs_node_fr e1 abs_node_idx_to_concrete_edge 0 in
+  let abs_node_idx_to_concrete_ndoe = saving_like_array abs_node_to e2 abs_node_idx_to_concrete_edge 1 in
+  if(exit_subgraph_DFS ) then true
+  else checking_exist_subgraph_DFS t abs_node_fr abs_node_to sub_abs_graph_edge myA init_graph_edge subgraph 
+
+
+
+let eval_abs_graph_DFS x_node x_edge myA 
 = let (nodes, edges) = graph in
   let (absNodes, absEdges) = abs_graph in
   let abs_edge_first = List.hd absEdges in
   let (abs_node_fr, abs_node_to) = abs_edge_first in
   let candidate_edges = [] in
-  
-
+  let candidate_edges = condition_candidate_edges candidate_edges edges abs_edge_first edge x_edge myA absNode abs_node_fr abs_node_to x_node in
+  let bool_exist_subgraph_DFS = 
   (* eval_abs_graph_DFS *)
 
 let rec make_cic_set idx graphs abs_edges_len labeled_graphs train_graphs correct_set incorrect_set
