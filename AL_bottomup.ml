@@ -252,7 +252,7 @@ let rec candidating_fr_nodes
   if(condition1 && condition2 && condition3) then
     let (itv, e1, e2) = target_abs_edge in
     let new_abs_edge_idx_to_concrete_edge = abs_edge_idx_to_concrete_edge in
-    let new_abs_node_idx_to_concrete_node = abs_edge_idx_to_concrete_edge in
+    let new_abs_node_idx_to_concrete_node = abs_node_idx_to_concrete_node in
     let new_abs_edge_idx_to_concrete_edge = saving_like_array abs_edge_idx con_edge new_abs_edge_idx_to_concrete_edge 0 in
     let new_abs_node_idx_to_concrete_node = saving_like_array e1 fr_con new_abs_node_idx_to_concrete_node 0 in
     let new_subgraph = subgraph in
@@ -268,13 +268,13 @@ let rec candidating_to_nodes
   | [] -> 1 
   | h::t ->
     let (absNodes, absEdges) = abs_graph in
-    let (e1, e2) = List.nth myA con_edge
+    let (e1, e2) = List.nth myA con_edge in
     let (con_edge, to_con) = h in
     let condition1 = not (List.mem to_con (List.hd subgraph)) in
     let condition2 = concrete_node_belong_abs_node (List.nth absNodes abs_node_to) e2 x_node in
     let condition3 = concrete_edge_belong_abs_edge target_abs_edge con_edge x_edge in
     if(condition1 && condition2 && condition3) then
-      let (itv, e1, e2) = target_abs_edge
+      let (itv, e1, e2) = target_abs_edge in
       let new_abs_node_idx_to_concrete_node = abs_node_idx_to_concrete_node in
       let new_abs_node_idx_to_concrete_node = saving_like_array e2 to_con new_abs_node_idx_to_concrete_node 0 in
       let new_abs_edge_idx_to_concrete_edge = abs_edge_idx_to_concrete_edge in
@@ -421,7 +421,7 @@ in (best_abs_graph, best_score)
 
   (*enumerate_and_remove_edges_aggressive 끝*)
 
-let rec remove_edge_intervals 
+let rec remove_edge_intervals edge_idx best_abs_graph absEdges best_score 
 = if(edge_idx >= 0) then
   let new_abs_graph = best_abs_graph in
   let new_itv = [] in
@@ -434,8 +434,8 @@ let rec remove_edge_intervals
     let best_abs_graph = new_abs_graph in
     let best_score = new_score in
     let edge_idx = edge_idx -1 in
-    remove_edge_intervals   
-  else let edge_idx = edge_idx -1 in remove_edge_intervals  
+    remove_edge_intervals edge_idx best_abs_graph absEdges best_score  
+  else let edge_idx = edge_idx -1 in remove_edge_intervals edge_idx best_abs_graph absEdges best_score 
 else (best_abs_graph, best_score)
 
 let generalize_edge_intervals_to_top 
@@ -443,9 +443,10 @@ let generalize_edge_intervals_to_top
   let best_score = current_score in 
   let (absNodes, absEdges) = best_abs_graph in
   let edge_idx = absEdges -1 in
-  let (best_abs_graph, best_score) = remove_edge_intervals 
+  let (best_abs_graph, best_score) = remove_edge_intervals edge_idx best_abs_graph absEdges best_score in
+  (best_abs_graph, best_score)
 
-let rec remove_node 
+let rec remove_node node_idx best_abs_graph best_score 
 = if (node_idx >= 0) then
   let new_abs_graph = best_abs_graph in
   let new_score = eval_abs_graph_on_graphs_GC in
@@ -453,16 +454,17 @@ let rec remove_node
     let best_abs_graph = new_abs_graph in
     let best_score = new_score in
     let node_idx = node_idx -1 in
-    remove_node 
-  else node_idx = node_idx-1 in remove_node 
+    remove_node node_idx best_abs_graph best_score 
+  else let node_idx = node_idx-1 in remove_node node_idx best_abs_graph best_score 
 else (best_abs_graph, best_score)
 
 let generalize_node_intervals_to_top
-= let (absNodes, absEdges) = abs_graph
+= let (absNodes, absEdges) = abs_graph in
   let best_abs_graph = abs_graph in
   let best_score = current_score in
   let node_idx = List.length absNodes -1 in 
-  let (best_abs_graph, best_score) = remove_node
+  let (best_abs_graph, best_score) = remove_node node_idx best_abs_graph best_score in
+  (best_abs_graph, best_score)
   
   (*refine*)
 let rec enu_itvs itvs
@@ -499,7 +501,6 @@ let rec enu_itvs itvs
   
   else enu_itvs
 
-
 and
 
 enu_itvs2 
@@ -522,7 +523,7 @@ let rec range_absNodes absNodes
   | h::t -> 
     let (absNodes, absEdges) = current_abs_graph in
     let itvs = List.nth absNodes node_idx in
-    if (List.empty itvs) range_absNodes t
+    if (List.empty itvs) then range_absNodes t
     else enu_itvs itvs
 
 let rec range_absEdges absEdges
@@ -531,7 +532,7 @@ let rec range_absEdges absEdges
   | h::t -> 
     let (absNodes, absEdges) = current_abs_graph in
     let (itvs, p, q) = List.nth absEdges edge_idx in
-    if (List.empty itvs) range_absEdges t
+    if (List.empty itvs) then range_absEdges t
     else enu_itvs itvs  
 
 
@@ -548,7 +549,7 @@ let rec remove_edge_flag
       let new_score = eval_abs_graph_on_graphs_GC  in
 
       if(new_score >= best_socre ) then
-        let flag = true 
+        let flag = true in
         let best_abs_graph = new_abs_graph in
         let best_score = new_score in
         let edge_idx = edge_idx-1 in
@@ -556,7 +557,7 @@ let rec remove_edge_flag
       else let edge_idx = edge_idx-1 in remove_edge_flag
   else (best_abs_graph, best_score, flag)
 
-let rec refine 
+let rec refine abs_graph current_score absNodes absEdges 
 = let current_abs_graph = abs_graph in
   let best_abs_graph = abs_graph in
   let best_score = current_score in
@@ -570,8 +571,8 @@ let rec refine
   let original_edge_len = List.length absEdges in
   let edge_idx = List.length absEdges -1 in
   let (best_abs_graph, best_scor, flag) = remove_edge_flag in
-  if flag = false then (best_abs_graph, best_score) in
-  else refine 
+  if flag = False then (best_abs_graph, best_score) 
+  else refine abs_graph current_score absNodes absEdges 
 
   (*refine 끝*)
 
@@ -579,32 +580,31 @@ let generalize abs_graph graphs labeled_graphs left_graphs train_graphs my_maps
 = let best_abs_graph = abs_graph in
   let (absNodes, absEdges) = best_abs_graph in
   let edge_idx = List.length absEdges -1 in
-  let best_score = eval_abs_graph_on_graphs_GC graphs abs_edges_len labeled_graphs left_graphs
-  let (best_abs_graph, best_score) = enumerate_and_remove_edges_aggressive
+  let best_score = eval_abs_graph_on_graphs_GC graphs abs_edges_len labeled_graphs left_graphs in
+  let (best_abs_graph, best_score) = enumerate_and_remove_edges_aggressive in
   let best_abs_graph = sort_abs_graph_edges best_abs_graph in
-  let (best_abs_graph, best_score) = generalize_edge_intervals_to_top 
-  let (best_abs_graph, best_score) = generalize_node_intervals_to_top
-  let (best_abs_graph, best_score) = refine 
+  let (best_abs_graph, best_score) = generalize_edge_intervals_to_top in
+  let (best_abs_graph, best_score) = generalize_node_intervals_to_top in
+  let (best_abs_graph, best_score) = refine abs_graph current_score absNodes absEdges
 in best_abs_graph
 
 (*generalize 끝*)
 
 let rec update_left_graphs left_graphs graphs my_maps
 = if (List.length left_graphs > 0) then
-    let graph_idx = btm_up_graph_chooser_from_middle left_graphs graphs
-    let abs_graph = construct_absgraph_undirected graph_idx my_maps graphs x_node
+    let graph_idx = btm_up_graph_chooser_from_middle left_graphs graphs in
+    let abs_graph = construct_absgraph_undirected graph_idx my_maps graphs x_node in
   
     (*let (left_graphs, graph, abs_graph) = not_connected_abs_graph*) 
   
-    let learned_abs_graph = generalize 
+    let learned_abs_graph = generalize in
 
-    let score = eval_abs_graph_on_graphs_GC
-    let chosen_train_graphs = eval_abs_graph_on_graphs_exist
+    let score = eval_abs_graph_on_graphs_GC in
+    let chosen_train_graphs = eval_abs_graph_on_graphs_exist in
 
     if(score < default_score * expected || List.length chosen_train_graphs = 1) then
-      print_int(0);
-      let left_graphs = remove_left_graphs 
-      update_left_graphs 
+      let left_graphs = remove_left_graphs in
+      update_left_graphs in
     else 
       let chosen_graphs = eval_abs_graph_on_graphs_exist 
       let left_graphs = left_graphs - chosen_graphs in
