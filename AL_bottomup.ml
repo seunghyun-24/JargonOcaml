@@ -195,19 +195,19 @@ in (abs_nodes, abs_edges)
 
 (*generalize*)
   (* eval_abs_graph_DFS *)
-let enu_itv (itvs : itv list) x_edge edge
+let rec enu_itv itvs x_edge edge
 = match itvs with
   | [] -> true
   | h::t -> 
-    let (bot, top) = List.nth itvs h in
-  if(List.nth (List.nth x_edge edge) h < bot || top < List.nth (List.nth x_edge edge)) then false
+    let (bot, top) = h in
+  if(List.nth (List.nth x_edge edge) 0 < bot || top < List.nth (List.nth x_edge edge) 0) then false
   else enu_itv t x_edge edge
 
 let concrete_edge_belong_abs_edge abs_edge edge x_edge
 = let (itvs, p, q) = abs_edge in
   enu_itv itvs x_edge edge
 
-let concrete_edge_belong_abs_node abs_node node x_node
+let concrete_node_belong_abs_node abs_node node x_node
 = enu_itv abs_node x_node node
 
 let rec condition_candidate_edges candidate_edges edges abs_edge_first edge x_edge myA absNode abs_node_fr abs_node_to x_node 
@@ -215,8 +215,8 @@ let rec condition_candidate_edges candidate_edges edges abs_edge_first edge x_ed
   | [] -> candidate_edges
   | h::t -> let cond1 = concrete_edge_belong_abs_edge abs_edge_first h x_edge in
   let (e1, e2) = List.nth myA h in
-  let cond2 = concrete_edge_belong_abs_node (List.nth absNodes abs_node_fr) e1 x_node in
-  let cond3 = concrete_edge_belong_abs_node (List.nth absNodes abs_node_to) e2 x_node in
+  let cond2 = concrete_node_belong_abs_node (List.nth absNode abs_node_fr) e1 x_node in
+  let cond3 = concrete_node_belong_abs_node (List.nth absNode abs_node_to) e2 x_node in
   if (cond1 && cond2 && cond3) then let candidate_edges = candidate_edges@[h] in condition_candidate_edges candidate_edges t abs_edge_first edge x_edge myA absNode abs_node_fr abs_node_to x_node 
   else condition_candidate_edges candidate_edges t abs_edge_first edge x_edge myA absNode abs_node_fr abs_node_to x_node 
 
@@ -241,13 +241,18 @@ let get_abs_edge_case_and_update_sub_abs_graph sub_abs_graph abs_edge
     let case = 0 in (sub_abs_graph, case) 
   else (sub_abs_graph, (-1))
 
+let check_hd_and_mem subgraph fr_con 
+= match subgraph with
+  | [] -> false
+  | h::t -> let (a,b) = h in if a = fr_con || b = fr_con then true 
+  else false
   
-let rec candidating_fr_nodes 
+let rec candidating_fr_nodes candidate_fr_nodes fr_con con_edge subgraph concrete_edge_belong_abs_edge concrete_node_belong_abs_node absNodes abs_node_fr myA x_node target_abs_edge x_edge abs_edge_idx_to_concrete_edge abs_node_idx_to_concrete_node abs_edge_idx sub_abs_graph abs_graph graph nodes_to_edge 
 = match candidate_fr_nodes with
   | [] -> 1 
   | h::t ->
-  let condition1 = not (List.mem fr_con (List.hd subgraph)) in
-  let condition2 = concrete_node_belong_abs_node (List.nth absNodes abs_node_fr, List.hd (List.nth myA), x_node) in
+  let condition1 = not (check_hd_and_mem subgraph fr_con) in
+  let condition2 = concrete_node_belong_abs_node (List.nth absNodes abs_node_fr, List.hd (List.nth myA h) x_node) in
   let condition3 = concrete_edge_belong_abs_edge target_abs_edge con_edge x_edge in
   if(condition1 && condition2 && condition3) then
     let (itv, e1, e2) = target_abs_edge in
@@ -256,14 +261,17 @@ let rec candidating_fr_nodes
     let new_abs_edge_idx_to_concrete_edge = saving_like_array abs_edge_idx con_edge new_abs_edge_idx_to_concrete_edge 0 in
     let new_abs_node_idx_to_concrete_node = saving_like_array e1 fr_con new_abs_node_idx_to_concrete_node 0 in
     let new_subgraph = subgraph in
-    let (new_node, new_edge) = new_subgraph in
-    let new_node = new_node@[fr_con] in
+    let [new_node, new_edge] = new_subgraph in
+    let new_node = new_node@fr_con in
     let new_edge = new_edge@[con_edge] in
-    if(exist_subgraph_DFS ) then 0
-    else candidating_fr_nodes 
-  else candidate_fr_nodes 
+    if(exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge nodes_to_edge
+      ) then 0
+    else candidating_fr_nodes candidate_fr_nodes fr_con con_edge subgraph concrete_edge_belong_abs_edge concrete_node_belong_abs_node absNodes abs_node_fr myA x_node target_abs_edge x_edge abs_edge_idx_to_concrete_edge abs_node_idx_to_concrete_node abs_edge_idx sub_abs_graph abs_graph graph nodes_to_edge 
+  else candidating_fr_nodes candidate_fr_nodes fr_con con_edge subgraph concrete_edge_belong_abs_edge concrete_node_belong_abs_node absNodes abs_node_fr myA x_node target_abs_edge x_edge abs_edge_idx_to_concrete_edge abs_node_idx_to_concrete_node abs_edge_idx sub_abs_graph abs_graph graph nodes_to_edge 
 
-let rec candidating_to_nodes 
+and 
+
+candidating_to_nodes candidate_to_nodes abs_graph myA con_edge subgraph to_con x_node abs_node_to target_abs_edge x_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx
 = match candidate_to_nodes with
   | [] -> 1 
   | h::t ->
@@ -280,10 +288,11 @@ let rec candidating_to_nodes
       let new_abs_edge_idx_to_concrete_edge = abs_edge_idx_to_concrete_edge in
       let new_abs_edge_idx_to_concrete_edge = saving_like_array abs_edge_idx con_edge new_abs_edge_idx_to_concrete_edge 0 in
       let new_subgraph = subgraph in
-      let (new_node, new_edge) = new_subgraph in
-      let new_node = new_subgraph@[to_con] in
-      let new_edge = new_subgraph@[con_edge] in 
-      if(exist_subgraph_DFS) then 0
+      let [new_node, new_edge] = new_subgraph in
+      let new_node = new_node@[to_con] in
+      let new_edge = new_edge@[con_edge] in 
+      if(exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge nodes_to_edge
+        ) then 0
       else candidating_to_nodes 
     else candidating_to_nodes
 
@@ -339,7 +348,7 @@ let rec checking_exist_subgraph_DFS candidate_edges abs_node_fr abs_node_to sub_
 
 
 
-let eval_abs_graph_DFS x_node x_edge myA 
+let eval_abs_graph_DFS x_node x_edge myA graph abs_graph 
 = let (nodes, edges) = graph in
   let (absNodes, absEdges) = abs_graph in
   let abs_edge_first = List.hd absEdges in
@@ -590,6 +599,7 @@ in best_abs_graph
 
 (*generalize 끝*)
 
+(*
 let rec update_left_graphs left_graphs graphs my_maps
 = if (List.length left_graphs > 0) then
     let graph_idx = btm_up_graph_chooser_from_middle left_graphs graphs in
@@ -617,4 +627,4 @@ let learn_abs_graphs_bottom_up labeled_graphs train_graphs left_graphs graphs my
 = let default_score = (List.length labeled_graphs + List.length train_graphs) / List.length train_graphs in
   let learned_parameters = [] in
   let learned_parameters = update_left_graphs left_graphs graphs my_maps
-in learned_parameters 
+in learned_parameters *)
