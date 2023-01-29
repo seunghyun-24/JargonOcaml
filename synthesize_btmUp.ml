@@ -70,6 +70,11 @@ let rec saving_like_array _index _saving _list cnt
 let tuple_sort _list
 = List.sort (fun (k1, v1) (k2, v2) -> match compare v1 v2 with | 0 -> compare k1 k2 | c -> c) _list
 
+let rec mem_tuple _tuple key
+= match _tuple with
+| [(), ()] -> false
+| (e1, e2)::t -> if (e1=key || e2=key) then true else mem_tuple t key
+
 (* *)
 
   (* createInitial_btmUp *)
@@ -117,7 +122,7 @@ let construct_absgraph_undirected parameter my_maps graph_idx
   (abs_nodes, List.tl abs_edges)
 
   (* search_btmUp *)
-let sort_abs_graph_edges
+let sort_abs_graph_edges 
 
 let rec remove_edges ?(step=1) a b absEdges best_score
 = if a > b then (best_abs_graph, best_score)
@@ -127,6 +132,13 @@ let rec remove_edges ?(step=1) a b absEdges best_score
     let new_score = update_score
     if (new_score >= s) then remove_edges ~step (a + step) b new_abs_graph new_score
     else remove_edges ~step (a + step) b best_abs_graph best_score
+
+let rec remove_nodes nodes edges 
+= match nodes with
+  | [] -> nodes
+  | h::t -> 
+    if (mem_tuple edges h) then h::(remove_nodes t edges)
+    else remove_nodes t edges
 
 and not_my_connect 
 = 0
@@ -142,7 +154,7 @@ let search_btmUp abs_graphs training_graphs ci weight parameter my_maps
   in best_abs_graph
 
 
-let rec 
+let rec choose_graph abs_graph graphs my_maps
   let (n,e) = abs_graph in
   let chosen_graphs = choosing_graphs 0 (List.length n) abs_graph graphs my_maps
 in chosen_graphs (*set*)
@@ -158,26 +170,50 @@ let createInitial_btmUp train_graphs weight parameter my_maps
   let minimal_abstract_graph = construct_absgraph_undirected parameter my_maps chosen_middle_graph 
 in minimal_abstract_graph
 
-let update_score 
+let default_score
 = let intersection_labeled_and_trained_graphs = List.filter (fun n -> List.mem (List.nth labeled_graphs n) training_graphs) training_graphs
 in (List.length intersection_labeled_and_trained_graphs / List.length training_graphs)
 
-let rec find_better_graph learned_abstract_graphs training_graphs ci weight s parameter my_maps
-= let candidate_learned_abstract_graphs = search_btmUp learned_abstract_graphs training_graphs ci weight parameter my_maps in
-  let candidate_s = update_score in
-  if (candidate_s >= s) then find_better_graph candidate_learned_abstract_graphs candidate_s training_graphs ci weight s
-  else learned_abstract_graphs
+let rec update_score abs_graph graphs labeled_graphs left_graphs train_graphs my_maps
+= let max_score = 0 in 
+  let (abs_nodes, abs_edges) = abs_graph in
+  let (correct_set, incorrect_set) = saving_set 0 graphs [] [] in
+  if (List.length intersect left_graphs correct_set) = 0 then 0
+  else (List.length correct_set / (List.length correct_set + List.length incorrect_set + 1))
 
-let rec learning_better train_graphs learned_abstract_graphs ci weight labeled_graphs parameter my_maps
+and saving_set cnt graphs correct_set incorrect_set
+= let (abs_node, abs_edge) = graphs in
+  match abs_edge with
+| [] -> (correct_set, incorrect_set)
+| h::t -> 
+  if (not List.mem train_graphs cnt) then saving_set (cnt+1) (List.tl abs_node, List.tl abs_edge) correct_set incorrect_set
+  else 
+    let exists = eval_abs_graph_DFS  in
+    if (exists) then saving_set (cnt+1) (List.tl abs_node, List.tl abs_edge) correct_set@[cnt] incorrect_set
+    else saving_set (cnt+1) (List.tl abs_node, List.tl abs_edge) correct_set incorrect_set@[cnt]
+  
+let rec learning_better train_graphs learned_abstract_graphs s ci weight parameter my_maps refine
+= if (refine) then
+    let candidate_learned_abstract_graphs = search_btmUp learned_abstract_graphs training_graphs ci weight parameter my_maps in
+    let candidate_s = update_score in
+    if (candidate_s >= s) then learning_better train_graphs candidate_learned_abstract_graphs candidate_s ci weight parameter my_maps refine
+    else learning_better train_graphs learned_abstract_graphs s ci weight parameter my_maps false
+else learned_abstract_graphs
+
+let synthesize_btmUp train_graphs ci weight parameter my_maps
+= let learned_abstract_graphs = createInitial_btmUp train_graphs weight parameter my_maps in
+  let s = update_score
+  let refine = true
+  let learned_abstract_graphs = learning_better train_graphs learned_abstract_graphs s ci weight parameter my_maps refine
+in learned_abstract_graphs
+
+
+(*
 = if(List.length parameter.left_graphs > 0)
     let s = update_score train_graphs learned_abstract_graphs ci weight labeled_graphs parameter my_maps in
     let chosen_graphs = find_better_graph learned_abstract_graphs train_graphs ci weight s parameter my_maps in
     let parameter.left_graphs = parameter.left_graphs - learned_abstract_graphs in
     let learned_abstract_graphs = learned_abstract_graphs@[chosen_graphs] in
-    learning_better train_graphs learned_abstract_graphs ci weight labeled_graphs parameter my_maps
-else learned_abstract_graphs
 
-let synthesize_btmUp train_graphs ci weight labeled_graphs parameter my_maps
-= let learned_abstract_graphs = createInitial_btmUp train_graphs weight parameter my_maps in
-  let learned_abstract_graphs = learning_better train_graphs learned_abstract_graphs ci weight labeled_graphs parameter my_maps
-in learned_abstract_graphs
+    learning_better train_graphs learned_abstract_graphs ci weight labeled_graphs parameter my_maps
+else learned_abstract_graphs*)
