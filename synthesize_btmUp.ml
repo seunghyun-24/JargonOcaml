@@ -14,7 +14,7 @@ type tgraphs = tgraph list
   and tedge = int * int
 
 type parameter = {
-  mutable graphs : tgraphs;
+  mutable graphs : (int list * (int * int) list) list;
   mutable left_graphs : int list;
   mutable train_graphs : int list;
   mutable labeled_graphs : int list;
@@ -59,23 +59,21 @@ let rec difference a b
 (* 합집합, 차집합, 교집합을 위한 list에 사용될 함수 구현 끝*)
 
 let rec update_score abs_graph graphs labeled_graphs left_graphs train_graphs my_maps
-= let max_score = 0 in 
-  let (abs_nodes, abs_edges) = abs_graph in
-  let (correct_set, incorrect_set) = saving_set 0 graphs [] [] train_graphs in
+= let (abs_nodes, abs_edges) = abs_graph in
+  let (correct_set, incorrect_set) = saving_set 0 graphs [] [] train_graphs abs_graph my_maps in
   if (List.length (intersect left_graphs correct_set)) = 0 then 0
   else (List.length correct_set / (List.length correct_set + List.length incorrect_set + 1))
 
-and saving_set cnt graphs correct_set incorrect_set train_graphs
-= let (abs_node, abs_edge) = graphs in
-  match abs_edge with
+and saving_set cnt graphs correct_set incorrect_set train_graphs abs_graph my_maps
+= match graphs with
+| (n, e)::t -> if(not (List.mem cnt train_graphs)) then saving_set (cnt+1) t correct_set incorrect_set train_graphs abs_graph my_maps
+else let exists = eval_abs_graph_DFS abs_graph graphs my_maps in
+if (exists) then saving_set (cnt+1) t (correct_set@[cnt]) incorrect_set train_graphs abs_graph my_maps
+else saving_set (cnt+1) t correct_set (incorrect_set@[cnt]) train_graphs abs_graph my_maps
 | [] -> (correct_set, incorrect_set)
-| h::t -> 
-  if (not (List.mem cnt train_graphs)) then saving_set (cnt+1) (List.tl abs_node, List.tl abs_edge) correct_set incorrect_set
-  else 
-    let exists = eval_abs_graph_DFS  in
-    if (exists) then saving_set (cnt+1) (List.tl abs_node, List.tl abs_edge) correct_set@[cnt] incorrect_set
-    else saving_set (cnt+1) (List.tl abs_node, List.tl abs_edge) correct_set incorrect_set@[cnt]
 
+and eval_abs_graph_DFS abs_graph graph my_maps =
+false 
 (* tuple 때문에 사용하는 list 함수 *)
 
 let rec saving_like_array _index _saving _list cnt
@@ -88,7 +86,7 @@ let rec saving_like_array _index _saving _list cnt
 let rec remove_like_array _index _list cnt
 = match _list with
   | [] -> if(cnt=_index) then _list
-          else remove_like_array _index _saving (_list@[]) (cnt+1)
+          else remove_like_array _index (_list@[]) (cnt+1)
   | h::t -> if(cnt=_index) then t 
             else h::(remove_like_array _index t (cnt+1))
 
@@ -97,15 +95,14 @@ let tuple_sort _list
 
 let rec mem_tuple _tuple key
 = match _tuple with
-| [(), ()] -> false
-| (e1, e2)::t -> if (e1=key || e2=key) then true else mem_tuple t key
+| [[], (), ()] -> false
+| (itv, e1, e2)::t -> if (List.mem key itv) then true else mem_tuple t key
 
-let set_new_itv edge_idx absEdges cnt
+let rec set_new_itv edge_idx absEdges cnt
 = match absEdges with
-  | [a, b, c]::t -> if (edge_idx = cnt) then ([], b, c)::t 
-  else [a,b,c]::(set_array_like edge_idx t (cnt+1))
+  | (a, b, c)::t -> if (edge_idx = cnt) then ([], b, c)::t 
+  else (a,b,c)::(set_new_itv edge_idx t (cnt+1))
   | _ -> raise Error
-
 
 (* *)
 
@@ -147,8 +144,15 @@ let rec undi_abs_edge edges my_maps node_abs_node_map abs_edges
 and _undi_abs_edge edge_feature new_itv
 = match edge_feature with | [] -> new_itv | h::t -> _undi_abs_edge t (new_itv@[h, h])
 
+let rec graph_slicing_array graphs graph_idx cnt
+= match graphs with
+  | (n,e)::t -> 
+    if (graph_idx = cnt) then (n, e)
+    else graph_slicing_array t graph_idx (cnt+1)
+  | _ -> raise Error 
+
 let construct_absgraph_undirected parameter my_maps graph_idx
-= let (nodes, edges) = List.nth parameter.graphs graph_idx in
+= let (nodes, edges) = graph_slicing_array parameter.graphs graph_idx 0 in
   let (abs_nodes, node_abs_node_map) = undi_abs_node nodes my_maps [] [] 0 in
   let abs_edges = undi_abs_edge nodes my_maps node_abs_node_map [[], 0, 0] in
   (abs_nodes, List.tl abs_edges)
@@ -156,18 +160,18 @@ let construct_absgraph_undirected parameter my_maps graph_idx
   (* search_btmUp *)
 let rec remove_nodes nodes edges 
 = match nodes with
-  | [] -> nodes
+  | [(), ()] -> nodes
   | h::t -> 
     if (mem_tuple edges h) then h::(remove_nodes t edges)
     else remove_nodes t edges
 
 let rec remove_edges_and_nodes abs_graph parameter my_maps current_score
 = let (absNodes, absEdges) = abs_graph in
-  let edge_idx = List.length absNodes -1 in
+  let edge_idx = List.length absEdges -1 in
   let (best_abs_graph, best_score) = remove_edge_idx abs_graph current_score edge_idx parameter my_maps in
   let (abs_node, abs_edge) = best_abs_graph in
   let abs_node = remove_nodes abs_node abs_edge in
-  (abs_node, abs_edge)
+  ((abs_node, abs_edge), best_score)
 
 and remove_edge_idx best_abs_graph best_score edge_idx parameter my_maps
 = if (edge_idx >= 0) then
@@ -200,7 +204,7 @@ else (best_abs_graph, best_score)
 
 let rec generalize_edges_top (abs_node, abs_edge) parameter my_maps current_score
 = let edge_idx = List.length abs_edge -1 in
-  while_edge_idx (abs_node, abs_edge) best_score edge_idx parameter my_maps
+  while_edge_idx (abs_node, abs_edge) current_score edge_idx parameter my_maps
 
 and while_edge_idx best_abs_graph best_score edge_idx parameter my_maps
 = if (edge_idx >= 0) then
@@ -212,7 +216,7 @@ and while_edge_idx best_abs_graph best_score edge_idx parameter my_maps
 else (best_abs_graph, best_score)
 
   (* refine *)
-
+(*
 let rec enu_itvs_n _itvs best_abs_graph best_score flag labeled_graphs left_graphs feat_idx node_idx 
 = match _itvs with
   | [] -> (best_abs_graph, best_score, flag)
@@ -223,14 +227,14 @@ let rec enu_itvs_n _itvs best_abs_graph best_score flag labeled_graphs left_grap
     if(a!= (-99) && b!=99) then 
       let new_itvs = (saving_like_array feat_idx (a, 99) _itvs) in
       let abs_node = saving_like_array node_idx new_itvs abs_node in
-      let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
+      let new_score = update_score (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
       let new_abs_graph = best_abs_graph in
 
       if(new_score >= best_score) then 
         let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
         let new_itvs = saving_like_array feat_idx (-99, b) _itvs in
         let abs_node = saving_like_array node_idx new_itvs abs_node in
-        let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
+        let new_score = update_score (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
         if(new_score >= best_score) then 
           let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
           enu_itvs_n t best_abs_graph best_score flag labeled_graphs left_graphs
@@ -325,17 +329,16 @@ let rec refine abs_graph current_abs_graph best_abs_graph best_score flag
   let (best_abs_graph, best_score) = remove_edges best_abs_graph best_score (List.nth absEdges -1) flag in
   if (flag) then refine abs_graph current_abs_graph best_abs_graph best_score flag 
   else (best_abs_graph, best_score)
+*)
 
-
-
-let search_btmUp abs_graphs training_graphs ci weight parameter my_maps
-= let s = update_score abs_graphs parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
-  let (abs_nodes, abs_edges) = abs_graphs in
-  let (best_abs_graph, best_score) = remove_edges_and_nodes abs_graphs parameter my_maps s in
-  let (best_abs_graph, best_score) = generalize_edge_top best_abs_graph parameter my_maps best_score in
-  let (best_abs_graph, best_score) = generalize_node_top best_abs_graph parameter my_maps best_score in
-  let (best_abs_graph, best_score) = refine 
-  in best_abs_graph
+let search_btmUp abs_graph training_graphs ci weight parameter my_maps
+= let s = update_score abs_graph parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
+  let (abs_nodes, abs_edges) = abs_graph in
+  let (best_abs_graph, best_score) = remove_edges_and_nodes abs_graph parameter my_maps s in
+  let (best_abs_graph, best_score) = generalize_edges_top best_abs_graph parameter my_maps best_score in
+  let (best_abs_graph, best_score) = generalize_nodes_top best_abs_graph parameter my_maps best_score in
+  (*let (best_abs_graph, best_score) = refine 
+  in*) best_abs_graph
 
 let rec choose_graph abs_graph graphs my_maps
 = let (n,e) = abs_graph in
@@ -344,7 +347,7 @@ in chosen_graphs (*set*)
 
 and choosing_graphs ?(step=1) a b abs_graph graphs my_maps
 = if a > b then []
-  else if (eval_abs_graph_DFS abs_graph graph my_maps) then (a :: choosing_graphs ~step (a + step) b abs_graph graphs my_maps)
+  else if (eval_abs_graph_DFS abs_graph graphs my_maps) then (a :: choosing_graphs ~step (a + step) b abs_graph graphs my_maps)
   else choosing_graphs ~step (a + step) b abs_graph graphs my_maps
 
 (* 알고리즘을 위해 필요한 기본 함수 *)
@@ -352,27 +355,27 @@ let createInitial_btmUp train_graphs weight parameter my_maps
 = let chosen_middle_graph = btmUp_choose_middle parameter.left_graphs parameter.graphs in
   let minimal_abstract_graph = construct_absgraph_undirected parameter my_maps chosen_middle_graph 
 in minimal_abstract_graph
-
+(*
 let default_score
 = let intersection_labeled_and_trained_graphs = List.filter (fun n -> List.mem (List.nth labeled_graphs n) training_graphs) training_graphs
 in (List.length intersection_labeled_and_trained_graphs / List.length training_graphs)
-
+*)
 (* update_score *)
 
-let rec learning_better train_graphs learned_abstract_graphs s ci weight parameter my_maps refine
+let rec learning_better train_graphs learned_abstract_graph s ci weight parameter my_maps refine
 = if (refine) then
-    let candidate_learned_abstract_graphs = search_btmUp learned_abstract_graphs training_graphs ci weight parameter my_maps in
+    let candidate_learned_abstract_graphs = search_btmUp learned_abstract_graph train_graphs ci weight parameter my_maps in
     let candidate_s = update_score train_graphs parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
     if (candidate_s >= s) then learning_better train_graphs candidate_learned_abstract_graphs candidate_s ci weight parameter my_maps refine
-    else learning_better train_graphs learned_abstract_graphs s ci weight parameter my_maps false
-else learned_abstract_graphs
+    else learning_better train_graphs learned_abstract_graph s ci weight parameter my_maps false
+else learned_abstract_graph
 
 let synthesize_btmUp train_graphs ci weight parameter my_maps
-= let learned_abstract_graphs = createInitial_btmUp train_graphs weight parameter my_maps in
+= let learned_abstract_graph = createInitial_btmUp train_graphs weight parameter my_maps in
   let s = update_score train_graphs parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
   let refine = true in
-  let learned_abstract_graphs = learning_better train_graphs learned_abstract_graphs s ci weight parameter my_maps refine 
-in learned_abstract_graphs
+  let learned_abstract_graph = learning_better train_graphs learned_abstract_graph s ci weight parameter my_maps refine 
+in learned_abstract_graph
 
 
 (*
