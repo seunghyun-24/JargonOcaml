@@ -15,6 +15,9 @@ let convert_list _array
 let empty_list _list
 = match _list with | [] -> true | h::t -> false
 
+let rec cnt_tuple_list _list
+= match _list with | [[], _, _] -> 0 | h::t -> 1+(cnt_tuple_list t)
+
 let rec make_graphs_len_list left_graphs graphs graphs_len_list 
 = match left_graphs with
   | [] -> graphs_len_list 
@@ -87,74 +90,77 @@ let rec check_same_thing (nodes, edges) correct_set
   | h::t -> if(List.mem h nodes || List.mem h edges) then true
   else check_same_thing (nodes, edges) t 
 
-let eval_abs_graph_DFS
+let eval_abs_graph_DFS 
+= false
 
-let rec try_set graphs idx corret_set incorrct_set train_graphs abs_edges_len
-= match graphs with
+let rec try_set edges idx correct_set incorrect_set train_graphs abs_edges_len
+= match edges with
   | [] -> (correct_set, incorrect_set)
-  | h::t -> if (not List.mem train_graphs idx) then try_set t (idx+1) corret_set incorrct_set train_graphs abs_edges_len
-            else let (nodes, edges) = graphs in
-            if (abs_edges_len > List.length edges) then try_set t (idx+1) corret_set incorrct_set train_graphs abs_edges_len
-            else let exist = eval_abs_graph_DFS in
-              if(exist) try_set t (idx+1) (corret_set@[idx]) incorrct_set train_graphs abs_edges_len
-              else try_set t (idx+1) corret_set (incorrct_set@[idx]) train_graphs abs_edges_len
+  | h::t -> if (not (List.mem idx train_graphs)) then try_set t (idx+1) correct_set incorrect_set train_graphs abs_edges_len
+            else if (abs_edges_len > List.length edges) then try_set t (idx+1) correct_set incorrect_set train_graphs abs_edges_len
+            else 
+              let exist = eval_abs_graph_DFS in
+              if (exist) then try_set t (idx+1) (correct_set@[idx]) incorrect_set train_graphs abs_edges_len
+              else try_set t (idx+1) correct_set (incorrect_set@[idx]) train_graphs abs_edges_len
 
-let update_score_btmUp graphs abs_edges_len labeled_graphs left_graphs
-= let (correct_set, incorrect_set) = try_set graphs 0 [] [] train_graphs abs_edges_len
-  if (not (check_same_thing left_graph correct_set)) then 0
+let update_score_btmUp (nodes, edges) abs_edges_len labeled_graphs left_graphs train_graphs
+= let (correct_set, incorrect_set) = try_set edges 0 [] [] train_graphs abs_edges_len in
+  if (not (check_same_thing left_graphs correct_set)) then 0
   else (List.length correct_set / (List.length correct_set + List.length incorrect_set + 1))
 
 let rec remove_idx_edge _list idx z
 = match _list with
   | [] -> []
   | h::t -> if (idx=z) then t
-  else h@(remove_idx_edge t idx (z+1))
+  else [h]@(remove_idx_edge t idx (z+1))
 
 let rec remove_edges best_abs_graph best_score edge_idx flag graphs labeled_graphs left_graphs
 = if (edge_idx >= 0) then
     let (absNodes, absEdges) = best_abs_graph in
     let absEdges = remove_idx_edge absEdges edge_idx 0 in
-    let new_score = update_score_btmUp graphs (List.length absEdges) labeled_graphs left_graphs
-    if (new_score >= best_score) then remove_edges (absNodes, absEdges) new_score (edge_idx-1) true
-    else remove_edges best_abs_graph best_score (edge_idx-1) flag
+    let new_score = update_score_btmUp graphs (List.length absEdges) labeled_graphs left_graphs in
+    if (new_score >= best_score) then remove_edges (absNodes, absEdges) new_score (edge_idx-1) true graphs labeled_graphs left_graphs
+    else remove_edges best_abs_graph best_score (edge_idx-1) flag graphs labeled_graphs left_graphs
   else (best_abs_graph, best_score)
 
-let generalize_edge_top best_abs_graph best_score edge_idx 
-= if(edge_idx >= 0) then
+let rec generalize_edge_top best_abs_graph best_score edge_idx labeled_graphs left_graphs train_graphs
+= if (edge_idx >= 0) then
     let (absNodes, absEdges) = best_abs_graph in
-    let (itv, efrom, eto) = (convert_array absEdges).(edge_idx) in
-    let absEdges = convert_list (Array.set (convert_array absEdges) edge_idx ([], efrom, eto)) in
-    let new_score = update_score_btmUp graphs abs_edges_len labeled_graphs left_graphs
-    if (new_score >= best_score) then generalize_edge_top (absNodes, absEdges) new_score (edge_idx-1)
-    else generalize_edge_top best_abs_graph best_score (edge_idx-1)
+    let (itv, efrom, eto) = (Array.of_list absEdges).(edge_idx) in
+    let absEdges = saving_like_array edge_idx ([], efrom, eto) absEdges in
+    (*let abs_edge_len = cnt_tuple_list absEdges in*)
+    let new_score = update_score_btmUp best_abs_graph 2(*abs_edge_len*) labeled_graphs left_graphs train_graphs in
+    if (new_score >= best_score) then generalize_edge_top (**)best_abs_graph new_score (edge_idx-1) labeled_graphs left_graphs train_graphs
+    else generalize_edge_top best_abs_graph best_score (edge_idx-1) labeled_graphs left_graphs train_graphs
 else (best_abs_graph, best_score)
 
-let rec generalize_node_top best_abs_graph best_score node_idx 
+let rec generalize_node_top best_abs_graph best_score node_idx labeled_graphs left_graphs
 = if(node_idx >= 0) then
     let (absNodes, absEdges) = best_abs_graph in
-    let absNodes = convert_list (Array.set convert_array absNodes node_idx (-100)) in
-    let new_score = update_score_btmUp graphs abs_edges_len labeled_graphs left_graphs
-    if (new_score >= best_score) then generalize_node_top (absNodes, absEdges) new_score (node_idx-1)
-    else generalize_node_top best_abs_graph best_score (node_idx-1)
+    let absNodes = saving_like_array node_idx (-100) absNodes in
+    let new_score = update_score_btmUp best_abs_graph 2(*List.length absNodes*) labeled_graphs left_graphs in
+    if (new_score >= best_score) then generalize_node_top best_abs_graph (*absNodes, absEdges*) new_score (node_idx-1) labeled_graphs left_graphs
+    else generalize_node_top best_abs_graph best_score (node_idx-1) labeled_graphs left_graphs
 else (best_abs_graph, best_score)
 
-let rec enu_itvs_n _itvs best_abs_graph best_score flag labeled_graphs left_graphs
+let rec enu_itvs_n _itvs best_abs_graph best_score flag labeled_graphs left_graphs feat_idx node_idx 
 = match _itvs with
   | [] -> (best_abs_graph, best_score, flag)
   | h::t -> 
-    let (a,b) = List.nth itvs h in
+    let (a,b) = List.nth _itvs 0 in
     let (abs_node, abs_edge) = best_abs_graph in
 
-    if(a!=-99 && b!=99) then 
-      let new_itvs = convert_list (convert_array itvs feat_idx (a, 99)) in
-      let abs_node = convert_list (convert_array abs_node node_idx new_itvs) in
-      let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs
-      
+    if(a!= (-99) && b!=99) then 
+      let new_itvs = (saving_like_array feat_idx (a, 99) _itvs) in
+      let abs_node = saving_like_array node_idx new_itvs abs_node in
+      let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
+      let new_abs_graph = best_abs_graph in
+
       if(new_score >= best_score) then 
         let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
-        let new_itvs = convert_list (convert_array itvs feat_idx (-99, b)) in
-        let abs_node = convert_list (convert_array abs_node node_idx new_itvs) in
-        let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs
+        let new_itvs = saving_like_array feat_idx (-99, b) _itvs in
+        let abs_node = saving_like_array node_idx new_itvs abs_node in
+        let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
         if(new_score >= best_score) then 
           let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
           enu_itvs_n t best_abs_graph best_score flag labeled_graphs left_graphs
@@ -162,7 +168,7 @@ let rec enu_itvs_n _itvs best_abs_graph best_score flag labeled_graphs left_grap
       else 
         let new_itvs = convert_list (convert_array itvs feat_idx (-99, b)) in
         let abs_node = convert_list (convert_array abs_node node_idx new_itvs) in
-        let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs
+        let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
         if(new_score >= best_score) then 
           let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
           enu_itvs_n t best_abs_graph best_score flag labeled_graphs left_graphs
@@ -171,7 +177,7 @@ let rec enu_itvs_n _itvs best_abs_graph best_score flag labeled_graphs left_grap
     else if ((a!=-99 && b==99) || (a == -99 && b != 99)) then
       let new_itvs = convert_list (convert_array itvs feat_idx (-99, 99)) in
       let abs_node = convert_list (convert_array abs_node node_idx new_itvs) in
-      let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs
+      let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
       if(new_score >= best_score) then 
         let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
           enu_itvs_n t best_abs_graph best_score flag labeled_graphs left_graphs
@@ -200,13 +206,13 @@ let rec enu_itvs_e _itvs best_abs_graph best_score flag labeled_graphs left_grap
     if(a!=-99 && b!=99) then 
       let new_itvs = convert_list (convert_array itvs feat_idx (a, 99)) in
       let abs_edge = convert_list (convert_array abs_edge edge_idx (new_itvs, p, q)) in
-      let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs
+      let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
       
       if(new_score >= best_score) then 
         let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
         let new_itvs = convert_list (convert_array itvs feat_idx (-99, b)) in
         let abs_edge = convert_list (convert_array abs_edge edge_idx (new_itvs, p, q)) in
-        let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs
+        let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
         if(new_score >= best_score) then 
           let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
           enu_itvs_e t best_abs_graph best_score flag labeled_graphs left_graphs p q
@@ -214,7 +220,7 @@ let rec enu_itvs_e _itvs best_abs_graph best_score flag labeled_graphs left_grap
       else 
         let new_itvs = convert_list (convert_array itvs feat_idx (-99, b)) in
         let abs_edge = convert_list (convert_array abs_edge edge_idx (new_itvs, p, q)) in
-        let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs
+        let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
         if(new_score >= best_score) then 
           let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
           enu_itvs_e t best_abs_graph best_score flag labeled_graphs left_graphs p q
@@ -223,7 +229,7 @@ let rec enu_itvs_e _itvs best_abs_graph best_score flag labeled_graphs left_grap
     else if ((a!=-99 && b==99) || (a == -99 && b != 99)) then
       let new_itvs = convert_list (convert_array itvs feat_idx (-99, 99)) in
       let abs_edge = convert_list (convert_array abs_edge edge_idx (new_itvs, p, q)) in
-      let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs
+      let new_score = update_score_btmUp (abs_node, abs_edge) (List.length abs_edge) labeled_graphs left_graphs in
       if(new_score >= best_score) then 
         let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
           enu_itvs_e t best_abs_graph best_score flag labeled_graphs left_graphs p q
@@ -247,14 +253,14 @@ let rec refine abs_graph current_abs_graph best_abs_graph best_score flag
   let (best_abs_graph, best_score, flag) = widening_edge abs_graph 0 current_abs_graph flag best_abs_graph best_score in
   let (absNodes, absEdges) = abs_graph in
   let (best_abs_graph, best_score) = remove_edges best_abs_graph best_score (List.nth absEdges -1) flag in
-  if (flag) refine abs_graph current_abs_graph best_abs_graph best_score flag 
+  if (flag) then refine abs_graph current_abs_graph best_abs_graph best_score flag 
   else (best_abs_graph, best_score)
 
 let search_btmUp learned_abstract_graphs training_graphs ci weight
 = let best_abs_graph = abs_graph in
   let (absNodes, absEdges) = best_abs_graph in
   let edge_idx = List.length absEdges -1 in
-  let best_score = update_score_btmUp 
+  let best_score = update_score_btmUp in
   
   (*remove edge*)
   let (absNodes, absEdges) = abs_graph in

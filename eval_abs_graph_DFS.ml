@@ -1,3 +1,11 @@
+type abstract_graph = abs_node list * abs_edge list
+and abs_node = itv list 
+and abs_edge = triple list
+and triple = itv list * from_idx * to_idx
+and itv = Itv of float * float 
+and from_idx = int
+and to_idx = int 
+
 let convert_array _list
 = Array.of_list _list
 
@@ -64,7 +72,7 @@ let checking_tuple_mem subgraph k
   
 let rec candidating_fr_nodes candidate_fr_nodes fr_con con_edge subgraph concrete_edge_belong_abs_edge concrete_node_belong_abs_node absNodes abs_node_fr myA x_node target_abs_edge x_edge abs_edge_idx_to_concrete_edge abs_node_idx_to_concrete_node abs_edge_idx sub_abs_graph abs_graph graph nodes_to_edge 
 = match candidate_fr_nodes with
-  | [] -> 1 
+  | [] -> true
   | h::t ->
   let condition1 = not (checking_tuple_mem subgraph fr_con) in
   let condition2 = concrete_node_belong_abs_node (List.nth absNodes abs_node_fr, List.hd (List.nth myA h) x_node) in
@@ -78,16 +86,15 @@ let rec candidating_fr_nodes candidate_fr_nodes fr_con con_edge subgraph concret
     let (new_node, new_edge) = subgraph in
     let new_node = new_node@fr_con in
     let new_edge = new_edge@con_edge in
-    if(exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge nodes_to_edge
-      ) then 0
+    if (exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge nodes_to_edge) then 0
     else candidating_fr_nodes candidate_fr_nodes fr_con con_edge subgraph concrete_edge_belong_abs_edge concrete_node_belong_abs_node absNodes abs_node_fr myA x_node target_abs_edge x_edge abs_edge_idx_to_concrete_edge abs_node_idx_to_concrete_node abs_edge_idx sub_abs_graph abs_graph graph nodes_to_edge 
   else candidating_fr_nodes candidate_fr_nodes fr_con con_edge subgraph concrete_edge_belong_abs_edge concrete_node_belong_abs_node absNodes abs_node_fr myA x_node target_abs_edge x_edge abs_edge_idx_to_concrete_edge abs_node_idx_to_concrete_node abs_edge_idx sub_abs_graph abs_graph graph nodes_to_edge 
 
 and 
 
-candidating_to_nodes candidate_to_nodes abs_graph myA con_edge subgraph to_con x_node abs_node_to target_abs_edge x_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph 
+candidating_to_nodes candidate_to_nodes abs_graph myA con_edge subgraph to_con x_node abs_node_to target_abs_edge x_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph nodes_to_edge
 = match candidate_to_nodes with
-  | [] -> 1 
+  | [] -> true
   | h::t ->
     let (absNodes, absEdges) = abs_graph in
     let (e1, e2) = List.nth myA con_edge in
@@ -106,18 +113,26 @@ candidating_to_nodes candidate_to_nodes abs_graph myA con_edge subgraph to_con x
       let (new_node, new_edge) = new_subgraph in
       let new_node = new_node@[to_con] in
       let new_edge = new_edge@[con_edge] in 
-      if(exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge nodes_to_edge) then 0
-      else candidating_to_nodes candidate_to_nodes abs_graph myA con_edge subgraph to_con x_node abs_node_to target_abs_edge x_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph 
-    else candidating_to_nodes candidate_to_nodes abs_graph myA con_edge subgraph to_con x_node abs_node_to target_abs_edge x_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph 
+      if(exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx [abs_node_idx_to_concrete_node] [abs_edge_idx_to_concrete_edge] nodes_to_edge) then 0
+      else candidating_to_nodes t abs_graph myA con_edge subgraph to_con x_node abs_node_to target_abs_edge x_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph nodes_to_edge
+    else candidating_to_nodes t abs_graph myA con_edge subgraph to_con x_node abs_node_to target_abs_edge x_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph nodes_to_edge
 
 and 
 
-exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge nodes_to_edge
+cnt_length absEdges 
+= match absEdges with
+  | [] -> 0
+  | h::t -> 1+cnt_length t
+
+and
+
+exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge nodes_to_edge abs_edges
 = let (absNodes, absEdges) = abs_graph in
-  if (List.length absEdges = abs_edge_idx) then false 
-  else let target_abs_edge = List.nth absEdges abs_edge_idx in
-  let new_sub_abs_graph = sub_abs_graph in
-  let (new_sub_abs_graph, case) = get_abs_edge_case_and_update_sub_abs_graph sub_abs_graph abs_edge in
+  if (cnt_length absEdges = abs_edge_idx) then false 
+  else 
+    let target_abs_edge = List.nth absEdges abs_edge_idx in
+    let new_sub_abs_graph = sub_abs_graph in
+    let (new_sub_abs_graph, case) = get_abs_edge_case_and_update_sub_abs_graph sub_abs_graph abs_edges in
   if (case = 2) then
     let (itv_, abs_node_fr, abs_node_to) = target_abs_edge in
     let fr_con = List.nth abs_node_idx_to_concrete_node abs_node_fr in
@@ -130,9 +145,9 @@ exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_
         let (new_node, new_edge) = subgraph in
         let new_edge = new_edge@[con_edge] in
         let new_subgraph = (new_node, new_edge) in
-        if (exist_subgraph_DFS ) then 0
-        else 1
-      else 1
+        if (exist_subgraph_DFS ) then false
+        else true
+      else true
     else if (case = 1) then
       let (itv_, abs_node_fr, abs_node_to) = target_abs_edge in
       let to_con = List.nth abs_node_idx_to_concrete_node abs_node_to in
@@ -143,9 +158,9 @@ exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_
       let (itv_, abs_node_fr, abs_node_to) = target_abs_edge in
       let fr_con = List.nth abs_node_idx_to_concrete_node abs_node_fr in
       let candidate_to_nodes = succ_node_to_nodes fr_con in
-      let result = candidating_to_nodes candidate_to_nodes abs_graph myA con_edge subgraph to_con x_node abs_node_to target_abs_edge x_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph in
+      let result = candidating_to_nodes candidate_to_nodes abs_graph myA con_edge subgraph to_con x_node abs_node_to target_abs_edge x_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph nodes_to_edge in
       result
-    else 1
+    else true
 
 let rec checking_exist_subgraph_DFS candidate_edges abs_node_fr abs_node_to sub_abs_graph_edge myA init_graph_edge subgraph 
 = match candidate_edges with
