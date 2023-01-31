@@ -1,37 +1,22 @@
 exception Error
 
-let convert_array _list
-= Array.of_list _list
-
-let convert_list _array 
-= Array.to_list _array
-
-let rec saving_like_array _index _saving _list cnt
-= match _list with
-  | [] -> if(cnt=_index) then _list@[_saving]
-          else saving_like_array _index _saving (_list@[]) (cnt+1)
-  | h::t -> if(cnt=_index) then [_saving]@t 
-            else h::(saving_like_array _index _saving t (cnt+1))
-
-let rec find_like_dictionary key list
-= match list with
-  | h::t -> if (h=key) then 
-  | [] -> raise Error
-
+(*
 let rec enu_itv itvs x_edge edge
-= match itvs with
+= M.filter (fun n -> let (bot, top) = M.find n itvs in (List.nth (List.nth x_edge edge) n) < bot || top < (List.nth (List.nth x_edge edge) n)) itvs
+*)
+
+let rec enu_itv itvs_list x_edge edge
+= match itvs_list with
   | [] -> true
-  | h::t -> 
-    let (bot, top) = h in
-  if(List.nth (List.nth x_edge edge) 0 < bot || top < List.nth (List.nth x_edge edge) 0) then false
+  | (key, (bot, top))::t -> if (List.nth (List.nth x_edge edge) key) < bot || top < (List.nth (List.nth x_edge edge) key) then false
   else enu_itv t x_edge edge
 
 let concrete_edge_belong_abs_edge abs_edge edge x_edge
 = let (itvs, p, q) = abs_edge in
-  enu_itv itvs x_edge edge
+  enu_itv (M.bindings itvs) x_edge edge
 
 let concrete_node_belong_abs_node abs_node node x_node
-= enu_itv abs_node x_node node
+= enu_itv (M.bindings abs_node) x_node node
 
 let rec condition_candidate_edges candidate_edges edges my_maps absNodes abs_edge_first in
 = match edges with
@@ -44,6 +29,7 @@ let rec condition_candidate_edges candidate_edges edges my_maps absNodes abs_edg
     let cond3 = concrete_node_belong_abs_node (List.nth absNode abs_node_to) e2 my_maps.x_node in
     if (cond1 && cond2 && cond3) then condition_candidate_edges (candidate_edges@[h]) t my_maps absNodes abs_edge_first
     else condition_candidate_edges candidate_edges t my_maps absNodes abs_edge_first
+
 
 let get_abs_edge_case_and_update_sub_abs_graph sub_abs_graph abs_edge
 = let (itv, p, q) = abs_edge in
@@ -135,60 +121,66 @@ exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_
     let target_abs_edge = List.nth absEdges abs_edge_idx in
     let (new_sub_abs_graph, case) = get_abs_edge_case_and_update_sub_abs_graph sub_abs_graph target_abs_edge in
     
+    (*
     let (itv_, abs_node_fr, abs_node_to) = target_abs_edge in
-    let fr_con = List.nth abs_node_idx_to_concrete_node abs_node_fr in
-    let to_con = List.nth abs_node_idx_to_concrete_node abs_node_to in
-
+    let fr_con = M.find abs_node_fr abs_node_idx_to_concrete_node in
+    let to_con = M.find abs_node_to abs_node_idx_to_concrete_node in
+    *)
+    
   if (case = 2) then
-
+    let (itv_, abs_node_fr, abs_node_to) = target_abs_edge in
+    let fr_con = M.find abs_node_fr abs_node_idx_to_concrete_node in
+    let to_con = M.find abs_node_to abs_node_idx_to_concrete_node in
     if List.mem (fr_con, to_con) my_maps.nodes_to_edge then 
-      let con_edge = List.nth nodes_to_edge (fr_con, to_con) in
+      let con_edge = M.mem (fr_con, to_con) nodes_to_edge in
       if concrete_edge_belong_abs_edge target_abs_edge con_edge x_edge then
         let new_abs_edge_idx_to_concrete_edge = abs_edge_idx_to_concrete_edge in
-        let new_abs_edge_idx_to_concrete_edge = saving_like_array abs_edge_idx con_edge new_abs_edge_idx_to_concrete_edge 0 in
+        let new_abs_edge_idx_to_concrete_edge = M.find abs_edge_idx con_edge new_abs_edge_idx_to_concrete_edge in
         let (new_node, new_edge) = subgraph in
         let new_edge = new_edge@[con_edge] in
         let new_subgraph = (new_node, new_edge) in
-        if (exist_subgraph_DFS ) then false
-        else true
-      else true
+        if (exist_subgraph_DFS   ) then true
+        else false
+      else false
+
   else if (case = 1) then
-      let (itv_, abs_node_fr, abs_node_to) = target_abs_edge in
-      let to_con = List.nth abs_node_idx_to_concrete_node abs_node_to in
-      let candidate_fr_nodes = List.nth pred_node_to_nodes to_con in
-      let result = candidating_fr_nodes in
-      result
+    let (itv_, abs_node_fr, abs_node_to) = target_abs_edge in
+    let to_con = M.find abs_node_to abs_node_idx_to_concrete_node in
+    let candidate_fr_nodes = M.find to_con pred_node_to_nodes in
+    
+    let result = candidating_fr_nodes in
+      
+
+
   else if (case = 0) then
       let (itv_, abs_node_fr, abs_node_to) = target_abs_edge in
-      let fr_con = List.nth abs_node_idx_to_concrete_node abs_node_fr in
+      let fr_con = M.find abs_node_fr abs_node_idx_to_concrete_node in
       let candidate_to_nodes = succ_node_to_nodes fr_con in
-      let result = candidating_to_nodes candidate_to_nodes abs_graph myA con_edge subgraph to_con x_node abs_node_to target_abs_edge x_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph nodes_to_edge in
-      result
+      let result = candidating_to_nodes 
+
   else false
+
 
 let rec checking_exist_subgraph_DFS candidate_edges abs_node_fr abs_node_to my_maps abs_graph graph
 = match candidate_edges with
   | [] -> false
   | h::t -> 
+  let abs_node_idx_to_concrete_node = M.empty in
+  let abs_edge_idx_to_concrete_edge = M.empty in
+  
   let sub_abs_graph_edge = (abs_node_fr, abs_node_to) in 
   let sub_ags_graph = [[abs_node_fr, abs_node_to], [sub_abs_graph_edge]] in
-  let sub_node = List.nth my_maps.myA h in
-  let abs_node_idx_to_concrete_node = saving_like_array abs_node_fr (List.nth my_maps.myA h) [] 0 in
-  let abs_node_idx_to_concrete_node = saving_like_array abs_node_to (List.nth my_maps.myA h) abs_node_idx_to_concrete_node 0 in
-  let abs_edge_idx_to_concrete_edge = init_graph_edge in
-  if (exist_subgraph_DFS (sub_node, init_graph_edge) sub_abs_graph abs_graph graph 1 abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge my_maps) then true
+  
+  let (e1, e2) = List.nth my_maps.myA h in
+  let subgraph = [ [(e1, e2)], [init_graph_edge]]in
+
+  let abs_node_idx_to_concrete_node = M.add abs_node_fr e1 abs_node_idx_to_concrete_node in
+  let abs_node_idx_to_concrete_node = M.add abs_node_to e2 abs_node_idx_to_concrete_node in
+  let abs_edge_idx_to_concrete_edge = M.add 0 init_graph_edge abs_edge_idx_to_concrete_edge in
+  
+  if (exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph 1 abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge my_maps) then true
   else checking_exist_subgraph_DFS t abs_node_fr abs_node_to myA abs_graph graph
 
-
-
-  let subgraph = [] in let (e1, e2) = List.nth myA init_graph_edge in let subgraph = subgraph @ [[e1@[e2]], init_graph_edge] in
-  Array.set (Array.of_list abs_node_idx_to_concrete_edge) 0 init_graph_edge;
-  let abs_node_idx_to_concrete_edge = abs_node_idx_to_concrete_edge in
-  Array.set (Array.of_list abs_node_idx_to_concrete_edge) abs_node_fr e1;
-  Array.set (Array.of_list abs_node_idx_to_concrete_edge) abs_node_to e2;
-  let abs_node_idx_to_concrete_node = abs_node_idx_to_concrete_edge in
-  if(exit_subgraph_DFS ) then true
-  else checking_exist_subgraph_DFS t abs_node_fr abs_node_to sub_abs_graph_edge myA init_graph_edge subgraph 
 
 let eval_abs_graph_DFS my_maps graph abs_graph 
 = let (nodes, edges) = graph in
