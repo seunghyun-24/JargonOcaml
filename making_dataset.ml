@@ -113,6 +113,7 @@ let rec couting_graph_num indicator num
 
 let graph_num = couting_graph_num indicator 1
 
+
 let rec make_node first final list
 = if(first = final) then list@[first-1]
 else make_node (first+1) final (list@[first-1])
@@ -155,17 +156,50 @@ let parameter = {
   edge_to_label = []
 }
 
+module M = Map.Make(Int)
 let graph_to_edges = M.empty
 let graph_to_nodes = M.empty
 let node_to_graph = M.empty
 
-let mk_indicator indicator num graph_to_edges graph_to_nodes node_to_graph
+(* 이거 잘 안되네  하다보니 밑에 i,, 이거 기능을 안했으,,,, 흥힝홍헹,,,,,,,,,
+let rec mk_indicator indicator num graph_to_edges graph_to_nodes node_to_graph
 = match indicator with
   | [] -> (graph_to_edges, graph_to_nodes, node_to_graph)
-  | h::t -> let node_to_graph = M.add num (h-1) node_to_graph in
-  if(List.mem (h-1) graph_to_nodes) then
-    let graph_to_nodes = saving_like_array (h-1) num graph_to_nodes 0 in
+  | h::t -> let node_to_graph = M.add num [(h-1)] node_to_graph in
+  if (M.mem (h-1) graph_to_nodes) then
+    let graph_to_nodes = M.add (h-1) [num] graph_to_nodes in
     mk_indicator t (num+1) graph_to_edges graph_to_nodes node_to_graph
-  else mk_indicator t (num+1) graph_to_edges graph_to_nodes node_to_graph
+  else 
+    let a = (*M.find (h-1) graph_to_nodes in*) [] in
+    let graph_to_nodes = M.add (h-1) (a@[num]) graph_to_nodes in
+    mk_indicator t (num+1) graph_to_edges graph_to_nodes node_to_graph
 
-let (graph_to_edges, graph_to_nodes, node_to_graph) = 
+let (graph_to_edges, graph_to_nodes, node_to_graph) = mk_indicator indicator 0 graph_to_edges graph_to_nodes node_to_graph
+*)
+(* 미래의 나에게.. 이거.. 일일히 mem 체크 후에 find 써야했어.. 그래서 구현하지 않았어.. *) (*
+let rec mk_A myA i j graph_to_edges graph_to_nodes
+= match myA with
+  | [] -> graph_to_edges
+  | (fr_node, to_node)::t -> 
+    if List.mem fr_node (M.find j graph_to_nodes) then
+      let a = M.find j graph_to_nodes in
+      let graph_to_edges = M.add j (a@[i]) graph_to_edges in
+      mk_A myA (i+1) j graph_to_edges graph_to_nodes
+    else if List.mem fr_node (M.find (j+1) graph_to_nodes) then
+      let graph_to_edges = M.add (j+1) [i] graph_to_edges in
+      mk_A myA (i+1) (j+1) graph_to_edges graph_to_nodes
+    else mk_A myA (i+1) j graph_to_edges graph_to_nodes
+
+let graph_to_edges = mk_A myA 0 0 graph_to_edges graph_to_nodes *)
+
+
+let graph_to_label = M.empty
+
+let rec mk_graphToLabel graph_to_label num labels
+= match labels with
+  | [] -> graph_to_label
+  | h::t -> let graph_to_label = M.add num (h) graph_to_label in
+  mk_graphToLabel graph_to_label (num+1) t
+
+let graph_to_label = mk_graphToLabel graph_to_label 0 labels
+
