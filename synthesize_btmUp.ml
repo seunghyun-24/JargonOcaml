@@ -1,9 +1,9 @@
 exception Error
 
 type abstract_graph = abs_node list * abs_edge list
-  and abs_node = itv list 
+  and abs_node = (int * int) list 
   and abs_edge = triple list
-  and triple = itv list * from_idx * to_idx
+  and triple = (int * int) list * from_idx * to_idx
   and itv = Itv of float * float 
   and from_idx = int
   and to_idx = int 
@@ -220,101 +220,100 @@ else (best_abs_graph, best_score)
 
   (* refine *)
 
-let rec enu_itvs_n _itvs best_abs_graph best_score flag parameter my_maps
+let rec enu_itvs_n _itvs best_abs_graph best_score flag parameter my_maps node_idx
 = match _itvs with
   | [] -> (best_abs_graph, best_score, flag)
-  | h::t -> 
+  | (feat_idx, h)::t -> 
     let (a,b) = List.nth _itvs 0 in
     let (abs_node, abs_edge) = best_abs_graph in
 
     if(a!= (-99) && b!=99) then 
-      let new_itvs = saving_like_array feat_idx (a, 99) _itvs in
-      let abs_node = saving_like_array node_idx new_itvs abs_node in
+      let new_itvs = saving_like_array feat_idx (a, 99) _itvs 0 in
+      let abs_node = saving_like_array node_idx new_itvs abs_node 0 in
       let new_score = update_score (abs_node, abs_edge) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
       let new_abs_graph = best_abs_graph in
 
       if(new_score >= best_score) then 
         let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
-        let new_itvs = saving_like_array feat_idx (-99, b) _itvs in
-        let abs_node = saving_like_array node_idx new_itvs abs_node in
+        let new_itvs = saving_like_array feat_idx (-99, b) _itvs 0 in
+        let abs_node = saving_like_array node_idx new_itvs abs_node 0 in
         let new_score = update_score (abs_node, abs_edge) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
         if(new_score >= best_score) then 
-          let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
-          enu_itvs_n t best_abs_graph best_score flag parameter my_maps
-        else enu_itvs_n t best_abs_graph best_score flag parameter my_maps
+          let (flag, best_abs_graph, best_score) = (true, (abs_node, abs_edge), new_score) in 
+          enu_itvs_n t best_abs_graph best_score flag parameter my_maps node_idx
+        else enu_itvs_n t best_abs_graph best_score flag parameter my_maps node_idx
       else 
         let new_itvs = saving_like_array feat_idx (-99, b) _itvs 0 in
-        let abs_node = saving_like_array node_idx abs_node new_itvs in
+        let abs_node = saving_like_array node_idx new_itvs abs_node  0 in
         let new_score = update_score (abs_node, abs_edge) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
         if(new_score >= best_score) then 
+          enu_itvs_n t best_abs_graph best_score flag parameter my_maps node_idx
+        else enu_itvs_n t best_abs_graph best_score flag parameter my_maps node_idx
 
-          enu_itvs_n t best_abs_graph best_score flag parameter my_maps
-        else enu_itvs_n t best_abs_graph best_score flag parameter my_maps
-
-    else if ((a!=-99 && b==99) || (a == -99 && b != 99)) then
-      let new_itvs = saving_like_array feat_idx (-99, 99) itvs in
-      let abs_node = saving_like_array node_idx abs_node new_itvs in
+    else if ((a != -99 && b==99) || (a == -99 && b != 99)) then
+      let new_itvs = saving_like_array feat_idx (-99, 99) _itvs 0 in
+      let abs_node = saving_like_array node_idx new_itvs abs_node 0 in
       let new_score = update_score (abs_node, abs_edge) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
       if(new_score >= best_score) then 
-        let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
-          enu_itvs_n t best_abs_graph best_score flag parameter my_maps
-      else enu_itvs_n t best_abs_graph best_score flag parameter my_maps
+        let (flag, best_abs_graph, best_score) = (true, (abs_node, abs_edge), new_score) in 
+          enu_itvs_n t best_abs_graph best_score flag parameter my_maps node_idx
+      else enu_itvs_n t best_abs_graph best_score flag parameter my_maps node_idx
     
-    else enu_itvs_n t best_abs_graph best_score flag parameter my_maps
+    else enu_itvs_n t best_abs_graph best_score flag parameter my_maps node_idx
 
-let rec widening_node (absNodes, absEdges) node_idx current_abs_graph flag best_abs_graph best_score parameter my_maps
+let rec widening_node (absNodes, absEdges) node_idx (current_abs_graph:abstract_graph) flag best_abs_graph best_score parameter my_maps
 = match absNodes with
   | [] -> (current_abs_graph, best_score, flag)
   | h::t -> 
     let (abs_node, abs_edge) = current_abs_graph in
     let _itvs = List.nth abs_node node_idx in
     if (empty_list _itvs) then widening_node (t, absEdges) (node_idx+1) current_abs_graph flag best_abs_graph best_score parameter my_maps
-    else let (best_abs_graph, best_score, flag) = enu_itvs_n _itvs best_abs_graph best_score flag parameter my_maps
+    else let (best_abs_graph, best_score, flag) = enu_itvs_n _itvs best_abs_graph best_score flag parameter my_maps h
         in widening_node (t, absEdges) (node_idx+1) current_abs_graph flag best_abs_graph best_score parameter my_maps
 
 
-let rec enu_itvs_e _itvs best_abs_graph best_score flag p q parameter my_maps
+let rec enu_itvs_e _itvs best_abs_graph best_score flag p q parameter my_maps edge_idx
 = match _itvs with
   | [] -> (best_abs_graph, best_score, flag)
-  | feat_idx::t -> 
-    let (a,b) = List.nth itvs feat_idx in
+  | (feat_idx, h)::t -> 
+    let (a,b) = List.nth _itvs feat_idx in
     let (abs_node, abs_edge) = best_abs_graph in
 
-    if(a!=-99 && b!=99) then 
-      let new_itvs = saving_like_array feat_idx (a, 99) _itvs in
-      let abs_edge = saving_like_array edge_idx (new_itvs, p, q) abs_edge in
+    if(a != -99 && b != 99) then 
+      let new_itvs = saving_like_array feat_idx (a, 99) _itvs 0 in
+      let abs_edge = saving_like_array edge_idx (new_itvs, p, q) abs_edge 0 in
       let new_score = update_score (abs_node, abs_edge) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
       
       if(new_score >= best_score) then 
-        let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
-        let new_itvs = saving_like_array feat_idx (-99, b) _itvs in
-        let abs_edge = saving_like_array edge_idx (new_itvs, p, q) abs_edge in
+        let (flag, best_abs_graph, best_score) = (true, (abs_node, abs_edge), new_score) in 
+        let new_itvs = saving_like_array feat_idx (-99, b) _itvs 0 in
+        let abs_edge = saving_like_array edge_idx (new_itvs, p, q) abs_edge 0 in
         let new_score = update_score (abs_node, abs_edge) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
         if(new_score >= best_score) then 
-          let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
-          enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps
-        else enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps
+          let (flag, best_abs_graph, best_score) = (true, (abs_node, abs_edge), new_score) in 
+          enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps edge_idx
+        else enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps edge_idx
       else 
-        let new_itvs = saving_like_array feat_idx (-99, b) _itvs in
-        let abs_edge = saving_like_array edge_idx (new_itvs, p, q) abs_edge in
+        let new_itvs = saving_like_array feat_idx (-99, b) _itvs 0 in
+        let abs_edge = saving_like_array edge_idx (new_itvs, p, q) abs_edge 0 in
         let new_score = update_score (abs_node, abs_edge) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
         if(new_score >= best_score) then 
-          let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
-          enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps
-        else enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps
+          let (flag, best_abs_graph, best_score) = (true, (abs_node, abs_edge), new_score) in 
+          enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps edge_idx
+        else enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps edge_idx
         
-    else if ((a!=-99 && b==99) || (a == -99 && b != 99)) then
-      let new_itvs = saving_like_array feat_idx (-99, 99) _itvs in
-      let abs_edge = saving_like_array edge_idx (new_itvs, p, q) abs_edge in
+    else if ((a != -99 && b = 99) || (a = -99 && b != 99)) then
+      let new_itvs = saving_like_array feat_idx (-99, 99) _itvs 0 in
+      let abs_edge = saving_like_array edge_idx (new_itvs, p, q) abs_edge 0 in
       let new_score = update_score (abs_node, abs_edge) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
       if(new_score >= best_score) then 
-        let (flag, best_abs_graph, best_score) = (true, new_abs_graph, new_score) in 
-          enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps
-        else enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps
+        let (flag, best_abs_graph, best_score) = (true, (abs_node, abs_edge), new_score) in 
+          enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps edge_idx
+        else enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps edge_idx
 
-    else enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps
+    else enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps edge_idx
 
-let widening_edge (absNodes, absEdges) edge_idx current_abs_graph flag best_abs_graph best_score parameter my_maps
+let rec widening_edge (absNodes, absEdges) edge_idx (current_abs_graph:abstract_graph) flag best_abs_graph best_score parameter my_maps
 = match absEdges with
   | [] -> (best_abs_graph, best_score, flag) 
   | h::t ->
@@ -322,7 +321,7 @@ let widening_edge (absNodes, absEdges) edge_idx current_abs_graph flag best_abs_
     let (_itvs, p, q) = List.nth abs_edge edge_idx in
     if (empty_list _itvs) then widening_edge (absNodes, t) (edge_idx+1) current_abs_graph flag best_abs_graph best_score parameter my_maps
     else 
-      let (best_abs_graph, best_score, flag) = enu_itvs_e _itvs best_abs_graph best_score flag p q parameter my_maps
+      let (best_abs_graph, best_score, flag) = enu_itvs_e _itvs best_abs_graph best_score flag p q parameter my_maps edge_idx
       in widening_edge (absNodes, t) (edge_idx+1) current_abs_graph flag best_abs_graph best_score parameter my_maps
 
 let rec remove_edges best_abs_graph best_score edge_idx flag parameter my_maps 
@@ -358,7 +357,7 @@ let search_btmUp abs_graph training_graphs ci weight parameter my_maps
   let (best_abs_graph, best_score) = remove_edges_and_nodes abs_graph parameter my_maps s in
   let (best_abs_graph, best_score) = generalize_edges_top best_abs_graph parameter my_maps best_score in
   let (best_abs_graph, best_score) = generalize_nodes_top best_abs_graph parameter my_maps best_score in
-  let (best_abs_graph, best_score) = refine 
+  let (best_abs_graph, best_score) = refine best_abs_graph parameter my_maps best_score 
   in best_abs_graph
 
 let rec choose_graph abs_graph graphs my_maps
