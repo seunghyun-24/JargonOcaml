@@ -1,10 +1,40 @@
-type graph_list = graph list
-and graph = node list * edge list
-and node = int list
-and edge = (int * int) list
-
-
 exception InputError
+exception Error
+
+type abstract_graph = abs_node list * abs_edge list
+  and abs_node = itv list 
+  and abs_edge = triple list
+  and triple = itv list * from_idx * to_idx
+  and itv = Itv of float * float 
+  and from_idx = int
+  and to_idx = int 
+
+type igraphs = igraph list
+  and igraph = inode * iedge
+  and inode = int list
+  and iedge = int list
+
+type parameter = {
+  mutable graphs : igraphs;
+  mutable left_graphs : int list;
+  mutable train_graphs : int list;
+  mutable labeled_graphs : int list;
+  mutable node_to_label : int list;
+  mutable edge_to_label : int list
+}
+
+type my_maps = {
+  mutable myA : (int * int) list;
+  mutable x_edge : float list list;
+  mutable x_node: float list list
+}
+
+let rec saving_like_array _index _saving _list cnt
+= match _list with
+  | [] -> if(cnt=_index) then _list@[_saving]
+          else saving_like_array _index _saving (_list@[]) (cnt+1)
+  | h::t -> if(cnt=_index) then [_saving]@t 
+            else h::(saving_like_array _index _saving t (cnt+1))
 
 let rec read_feature oFile features 
 = try 
@@ -108,8 +138,34 @@ let rec making_graph_edge indicator myA graph_list cnt lcnt
               let graph_list = make_ h myA graph_list cnt lcnt
               in making_graph_edge t myA graph_list (cnt+1) cnt
 
-let a = making_graph_edge indicator myA [] 1 0
+let index_graph_list = making_graph_edge indicator myA [] 1 0
 
-            (*
-let making_graph labels_list indicator myA 
-*)
+let my_maps = {
+  x_node = x_node;
+  x_edge = x_edge;
+  myA = myA;
+}
+
+let parameter = {
+  graphs = [];
+  left_graphs = [];
+  train_graphs = [];
+  labeled_graphs = [];
+  node_to_label = [];
+  edge_to_label = []
+}
+
+let graph_to_edges = M.empty
+let graph_to_nodes = M.empty
+let node_to_graph = M.empty
+
+let mk_indicator indicator num graph_to_edges graph_to_nodes node_to_graph
+= match indicator with
+  | [] -> (graph_to_edges, graph_to_nodes, node_to_graph)
+  | h::t -> let node_to_graph = M.add num (h-1) node_to_graph in
+  if(List.mem (h-1) graph_to_nodes) then
+    let graph_to_nodes = saving_like_array (h-1) num graph_to_nodes 0 in
+    mk_indicator t (num+1) graph_to_edges graph_to_nodes node_to_graph
+  else mk_indicator t (num+1) graph_to_edges graph_to_nodes node_to_graph
+
+let (graph_to_edges, graph_to_nodes, node_to_graph) = 
