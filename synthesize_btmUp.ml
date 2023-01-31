@@ -1,6 +1,6 @@
 exception Error
 
-type abstract_graph = abs_node list * abs_edge list
+type abstract_graph = abs_node * abs_edge
   and abs_node = (int * int) list 
   and abs_edge = triple list
   and triple = (int * int) list * from_idx * to_idx
@@ -105,7 +105,10 @@ let rec set_new_itv edge_idx absEdges cnt
   | _ -> raise Error
 
 let empty_list _list
-= match _list with | [] -> true | h::t -> false
+= match _list with 
+  | h::t -> false
+  | [] -> true 
+  
 
 (* *)
 
@@ -267,8 +270,8 @@ let rec widening_node (absNodes, absEdges) node_idx (current_abs_graph:abstract_
   | h::t -> 
     let (abs_node, abs_edge) = current_abs_graph in
     let _itvs = List.nth abs_node node_idx in
-    if (empty_list _itvs) then widening_node (t, absEdges) (node_idx+1) current_abs_graph flag best_abs_graph best_score parameter my_maps
-    else let (best_abs_graph, best_score, flag) = enu_itvs_n _itvs best_abs_graph best_score flag parameter my_maps h
+    (*if (_itvs = []) then widening_node (t, absEdges) (node_idx+1) current_abs_graph flag best_abs_graph best_score parameter my_maps
+    else*) let (best_abs_graph, best_score, flag) = enu_itvs_n _itvs best_abs_graph best_score flag parameter my_maps h
         in widening_node (t, absEdges) (node_idx+1) current_abs_graph flag best_abs_graph best_score parameter my_maps
 
 
@@ -313,7 +316,7 @@ let rec enu_itvs_e _itvs best_abs_graph best_score flag p q parameter my_maps ed
 
     else enu_itvs_e t best_abs_graph best_score flag p q parameter my_maps edge_idx
 
-let rec widening_edge (absNodes, absEdges) edge_idx (current_abs_graph:abstract_graph) flag best_abs_graph best_score parameter my_maps
+let rec widening_edge (absNodes, absEdges) edge_idx current_abs_graph flag best_abs_graph best_score parameter my_maps
 = match absEdges with
   | [] -> (best_abs_graph, best_score, flag) 
   | h::t ->
@@ -351,7 +354,7 @@ let rec refine abs_graph parameter my_maps current_score
   else (best_abs_graph, best_score)
 
 
-let search_btmUp abs_graph training_graphs ci weight parameter my_maps
+let search_btmUp abs_graph train_graphs ci weight parameter my_maps
 = let s = update_score abs_graph parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
   let (abs_nodes, abs_edges) = abs_graph in
   let (best_abs_graph, best_score) = remove_edges_and_nodes abs_graph parameter my_maps s in
