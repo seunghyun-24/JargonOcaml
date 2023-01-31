@@ -1,20 +1,24 @@
+module M = Map.Make(Int);;
+
+exception InputError
 exception Error
 
-type abstract_graph = abs_node * abs_edge
-  and abs_node = (int * int) list 
+(* M.t = map 의 타입 *)
+type abstract_graph = abs_node list * abs_edge list
+  and abs_node = itv M.t
   and abs_edge = triple list
-  and triple = (int * int) list * from_idx * to_idx
+  and triple = itv M.t * from_idx * to_idx
   and itv = Itv of float * float 
   and from_idx = int
   and to_idx = int 
 
-type tgraphs = tgraph list
-  and tgraph = tnode list * tedge list
-  and tnode = int
-  and tedge = int * int
+type igraphs = igraph list
+  and igraph = inode * iedge
+  and inode = int list
+  and iedge = int list
 
 type parameter = {
-  mutable graphs : (int list * (int * int) list) list;
+  mutable graphs : igraphs;
   mutable left_graphs : int list;
   mutable train_graphs : int list;
   mutable labeled_graphs : int list;
@@ -27,6 +31,7 @@ type my_maps = {
   mutable x_edge : float list list;
   mutable x_node: float list list
 }
+
 (* 합집합, 차집합, 교집합을 위한 list에 사용될 함수 *)
 let rec mem x = function
   | [] -> false
@@ -37,14 +42,6 @@ let rec remove x = function
   | h::t -> if h = x then t else h::(remove x t)
 
 let mkset _list = List.sort_uniq compare _list 
-(*
-let intersect a b
-= match a with
-  | [] -> if b = [] then [] else intersect b a
-  | h::t ->
-    if mem h b then let b' = remove h b in h::(intersect t b')
-    else intersect t b
-*)
 
 let intersect a b 
 = List.filter (fun n -> List.mem (List.nth b n) a) a
@@ -58,6 +55,7 @@ let rec difference a b
 
 (* 합집합, 차집합, 교집합을 위한 list에 사용될 함수 구현 끝*)
 
+(* DFS 대신 BFS 로 찾아서 구현해볼 것 *)
 let rec update_score abs_graph graphs labeled_graphs left_graphs train_graphs my_maps
 = let (abs_nodes, abs_edges) = abs_graph in
   let (correct_set, incorrect_set) = saving_set 0 graphs [] [] train_graphs abs_graph my_maps in
@@ -74,35 +72,38 @@ else saving_set (cnt+1) t correct_set (incorrect_set@[cnt]) train_graphs abs_gra
 
 and eval_abs_graph_DFS abs_graph graph my_maps =
 false 
-(* tuple 때문에 사용하는 list 함수 *)
 
+
+(* tuple 때문에 사용하는 list 함수 *)
 let rec saving_like_array _index _saving _list cnt
 = match _list with
   | [] -> if(cnt=_index) then _list@[_saving]
           else saving_like_array _index _saving (_list@[]) (cnt+1)
   | h::t -> if(cnt=_index) then [_saving]@t 
-            else h::(saving_like_array _index _saving t (cnt+1))
+            else h::(saving_like_array _index _saving t (cnt+1)) (* <- 오류가 있습니당 *)
 
 let rec remove_like_array _index _list cnt
 = match _list with
   | [] -> if(cnt=_index) then _list
           else remove_like_array _index (_list@[]) (cnt+1)
   | h::t -> if(cnt=_index) then t 
-            else h::(remove_like_array _index t (cnt+1))
+            else h::(remove_like_array _index t (cnt+1)) (* <- 오류가 있습니당 *)
 
 let tuple_sort _list
 = List.sort (fun (k1, v1) (k2, v2) -> match compare v1 v2 with | 0 -> compare k1 k2 | c -> c) _list
 
-let rec mem_tuple _tuple key
-= match _tuple with
+let rec mem_triple _triple key
+= match _triple with
 | [[], (), ()] -> false
-| (itv, e1, e2)::t -> if (List.mem key itv) then true else mem_tuple t key
+| (itv, e1, e2)::t -> if (List.mem key itv) then true else mem_triple t key
 
+(*
 let rec set_new_itv edge_idx absEdges cnt
 = match absEdges with
   | (a, b, c)::t -> if (edge_idx = cnt) then ([], b, c)::t 
   else (a,b,c)::(set_new_itv edge_idx t (cnt+1))
   | _ -> raise Error
+*)
 
 let empty_list _list
 = match _list with 
@@ -129,8 +130,9 @@ in graph_idx
 let rec undi_abs_node nodes my_maps abs_nodes node_abs_node_map cnt 
 = match nodes with
   | [] -> (abs_nodes, node_abs_node_map)
-  | h::t -> let node_feature = List.nth my_maps.x_node h in let abs_node = _undi_abs_node node_feature [] in
-  undi_abs_node t my_maps (abs_nodes@abs_node) (saving_like_array h (cnt) node_abs_node_map 0) (cnt+1)
+  | h::t -> 
+    let node_feature = List.nth my_maps.x_node h in let abs_node = _undi_abs_node node_feature [] in
+  undi_abs_node t my_maps (abs_nodes@abs_node) (M.add h cnt node_abs_node_map) (cnt+1)
 
 and _undi_abs_node node_feature abs_node 
 = match node_feature with
@@ -142,33 +144,33 @@ let rec undi_abs_edge edges my_maps node_abs_node_map abs_edges
   | h::t -> let (from_node, to_node) = List.nth my_maps.myA h in
   if(to_node > from_node) then 
     let edge_feature = List.nth my_maps.x_edge h in 
-    let new_itv = _undi_abs_edge edge_feature [] in
-    let abs_edge = (new_itv, List.nth node_abs_node_map from_node, List.nth node_abs_node_map to_node)
+    let new_itv = _undi_abs_edge edge_feature M.empty 0 in
+    let abs_edge = (new_itv, M.find from_node node_abs_node_map, M.find to_node node_abs_node_map)
     in undi_abs_edge t my_maps node_abs_node_map (abs_edges@[abs_edge])
   else undi_abs_edge t my_maps node_abs_node_map abs_edges
 
-and _undi_abs_edge edge_feature new_itv
-= match edge_feature with | [] -> new_itv | h::t -> _undi_abs_edge t (new_itv@[h, h])
+and _undi_abs_edge edge_feature new_itv cnt
+= match edge_feature with | [] -> new_itv | h::t -> _undi_abs_edge t (M.add cnt (h, h) new_itv) (cnt+1)
 
 let rec graph_slicing_array graphs graph_idx cnt
-= match graphs with
-  | (n,e)::t -> 
-    if (graph_idx = cnt) then (n, e)
-    else graph_slicing_array t graph_idx (cnt+1)
-  | _ -> raise Error 
+  = match graphs with
+    | (n,e)::t -> 
+      if (graph_idx = cnt) then (n, e)
+      else graph_slicing_array t graph_idx (cnt+1)
+    | _ -> raise Error 
 
-let construct_absgraph_undirected parameter my_maps graph_idx
-= let (nodes, edges) = graph_slicing_array parameter.graphs graph_idx 0 in
-  let (abs_nodes, node_abs_node_map) = undi_abs_node nodes my_maps [] [] 0 in
-  let abs_edges = undi_abs_edge nodes my_maps node_abs_node_map [[], 0, 0] in
-  (abs_nodes, List.tl abs_edges)
+  let construct_absgraph_undirected parameter my_maps graph_idx
+  = let (nodes, edges) = graph_slicing_array parameter.graphs graph_idx 0 in
+    let (abs_nodes, node_abs_node_map) = undi_abs_node nodes my_maps [] M.empty 0 in
+    let abs_edges = undi_abs_edge nodes my_maps node_abs_node_map [] in
+    (abs_nodes, abs_edges)
 
   (* search_btmUp *)
 let rec remove_nodes nodes edges 
 = match nodes with
   | [(), ()] -> nodes
   | h::t -> 
-    if (mem_tuple edges h) then h::(remove_nodes t edges)
+    if (mem_triple edges h) then h::(remove_nodes t edges)
     else remove_nodes t edges
 
 let rec remove_edges_and_nodes abs_graph parameter my_maps current_score
