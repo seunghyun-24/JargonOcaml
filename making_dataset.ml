@@ -1,10 +1,22 @@
+module M = Map.Make(Int)
+module IntPairs
+= struct
+    type t = int * int
+    let compare (x0,y0) (x1,y1) =
+      match Stdlib.compare x0 x1 with
+        | 0 -> Stdlib.compare y0 y1
+        | c -> c
+      end
+module IM = Map.Make(IntPairs)
+
 exception InputError
 exception Error
 
-type abstract_graph = abs_node list * abs_edge list
-  and abs_node = itv list 
+(* M.t = map 의 타입 *)
+type abstract_graph = (abs_node) * (abs_edge)
+  and abs_node = (float*float) M.t list
   and abs_edge = triple list
-  and triple = itv list * from_idx * to_idx
+  and triple = (float*float) M.t * from_idx * to_idx
   and itv = Itv of float * float 
   and from_idx = int
   and to_idx = int 
@@ -16,17 +28,20 @@ type igraphs = igraph list
 
 type parameter = {
   mutable graphs : igraphs;
-  mutable left_graphs : int list;
-  mutable train_graphs : int list;
-  mutable labeled_graphs : int list;
-  mutable node_to_label : int list;
-  mutable edge_to_label : int list
+  mutable left_graphs : int M.t;
+  mutable train_graphs : int M.t;
+  mutable labeled_graphs : int M.t; (*사실은 set*)
+  mutable node_to_label : int M.t;
+  mutable edge_to_label : int list (**)
 }
 
 type my_maps = {
   mutable myA : (int * int) list;
-  mutable x_edge : float list list;
-  mutable x_node: float list list
+  mutable x_edge : int list list;
+  mutable x_node: int list list;
+  mutable nodes_to_edge : (int) IM.t;
+  mutable pred_node_to_nodes : ((int * int) list) M.t;
+  mutable succ_node_to_nodes : ((int * int) list) M.t
 }
 
 let rec saving_like_array _index _saving _list cnt
@@ -82,12 +97,28 @@ with
 
 
 let channel = open_in "MUTAG_node_labels.txt" 
-let x_node = read_feature channel []
-let nodes_len = List.length x_node
+(*let x_node = read_feature channel []
+let nodes_len = List.length x_node*)
+
+
+let node_to_label = M.empty
+let rec find_max_node_label oFile features max idx
+= try 
+    let line = input_line oFile in
+      if(int_of_string line > max) then find_max_node_label oFile (M.add idx (int_of_string line) features) (int_of_string line) (idx+1)
+      else find_max_node_label oFile (M.add idx (int_of_string line) features) max (idx+1)
+  with 
+    End_of_file -> (features, max)
+
+let (node_to_label, max_node_label) = find_max_node_label channel node_to_label 0 0
+
 
 let channel = open_in "MUTAG_edge_labels.txt" 
-let x_edge = read_feature channel []
-let edges_len = List.length x_edge
+(*let x_edge = read_feature channel []
+let edges_len = List.length x_edge*)
+
+let edge_to_label = M.empty
+let (edge_to_label, max_edge_label) = find_max_node_label channel edge_to_label 0 0
 
 
 let channel = open_in "MUTAG_graph_indicator.txt" 
@@ -141,25 +172,6 @@ let rec making_graph_edge indicator myA graph_list cnt lcnt
 
 let index_graph_list = making_graph_edge indicator myA [] 1 0
 
-let my_maps = {
-  x_node = x_node;
-  x_edge = x_edge;
-  myA = myA;
-}
-
-let parameter = {
-  graphs = [];
-  left_graphs = [];
-  train_graphs = [];
-  labeled_graphs = [];
-  node_to_label = [];
-  edge_to_label = []
-}
-
-module M = Map.Make(Int)
-let graph_to_edges = M.empty
-let graph_to_nodes = M.empty
-let node_to_graph = M.empty
 
 (* 이거 잘 안되네  하다보니 밑에 i,, 이거 기능을 안했으,,,, 흥힝홍헹,,,,,,,,,
 let rec mk_indicator indicator num graph_to_edges graph_to_nodes node_to_graph
@@ -202,4 +214,110 @@ let rec mk_graphToLabel graph_to_label num labels
   mk_graphToLabel graph_to_label (num+1) t
 
 let graph_to_label = mk_graphToLabel graph_to_label 0 labels
+
+let rec mk_labeled_graphs bind_graph_to_label labeled_graphs
+= match bind_graph_to_label with
+  | [] -> labeled_graphs
+  | (key, _val)::t -> if(_val = 1) then mk_labeled_graphs t labeled_graphs@[key]
+  else mk_labeled_graphs t labeled_graphs
+
+let labeled_graphs = mk_labeled_graphs (M.bindings graph_to_label) []
+
+let rec uniq_list a b 
+= match a with
+  | [] -> b
+  | h::t -> if(List.mem h b) then uniq_list t b
+  else uniq_list t (b@[h])
+
+let labeled_graphs = uniq_list labeled_graphs []
+
+let b = M.empty
+let rec list_to_map a b 
+= match a with
+  | [] -> b
+  | h::t -> list_to_map t (M.add h h b)
+let b = list_to_map labeled_graphs b
+let labeled_graphs = b
+
+
+
+let nodes_to_edge = IM.empty
+let pred_node_to_nodes = M.empty
+let succ_node_to_nodes = M.empty
+
+let rec mk_x _list max_node_label len node_to_label
+= if (max_node_label+1 > len) then 
+  if(List.mem len node_to_label) then mk_x (_list@[1]) max_node_label (len+1) node_to_label
+  else mk_x (_list@[0]) max_node_label (len+1) node_to_label
+else _list
+
+let rec _Mk_x _list node_to_label max_node_label
+= match node_to_label with
+  | [] -> _list
+  | h::t -> _Mk_x (_list@[(mk_x [] max_node_label 0 node_to_label)]) t max_node_label
+
+let rec map_to_listV after_bindings list
+= match after_bindings with
+  | [] -> list
+  | (_, _val)::t -> map_to_listV t (list@[_val])
+
+let x_node = _Mk_x [] (map_to_listV (M.bindings node_to_label) []) max_node_label
+let x_edge = _Mk_x [] (map_to_listV (M.bindings edge_to_label) []) max_edge_label
+
+
+let rec map_to_list after_bindings list
+= match after_bindings with
+  | [] -> list
+  | (key, _)::t -> map_to_list t (list@[key])
+
+let intersect a b 
+= List.filter (fun n -> List.mem n b) a
+
+let train_graphs = labeled_graphs
+let left_graphs = intersect (map_to_list (M.bindings labeled_graphs) []) (map_to_list (M.bindings train_graphs) [])
+
+let pred_node_to_nodes = M.empty
+let rec fr_make pred_node_to_nodes myA
+= match myA with 
+  | [] -> pred_node_to_nodes
+  | (a,b)::t -> fr_make (M.add a (a,b) pred_node_to_nodes) t
+
+let succ_node_to_nodes = M.empty
+let rec to_make succ_node_to_nodes myA
+= match myA with 
+  | [] -> succ_node_to_nodes
+  | (a,b)::t -> to_make (M.add b (a,b) succ_node_to_nodes) t
+
+let pred_node_to_nodes = fr_make pred_node_to_nodes myA
+let succ_node_to_nodes = to_make succ_node_to_nodes myA
+
+let nodes_to_edge = IM.empty
+let rec mk_nodes_to_edge nodes_to_edge myA idx
+= match myA with
+  | [] -> nodes_to_edge
+  | h::t -> mk_nodes_to_edge (IM.add h idx nodes_to_edge) t (idx+1)
+
+let nodes_to_edge = mk_nodes_to_edge nodes_to_edge myA 0
+
+let my_maps = {
+  x_node = x_node;
+  x_edge = x_edge;
+  myA = myA;
+  nodes_to_edge = nodes_to_edge;
+  pred_node_to_nodes = pred_node_to_nodes;
+  succ_node_to_nodes = succ_node_to_nodes
+
+}
+
+let parameter = {
+  graphs = index_graph_list;
+  train_graphs = train_graphs; (*힝*)
+  left_graphs = left_graphs;
+  labeled_graphs = left_graphs;
+  node_to_label = node_to_label;
+  edge_to_label = edge_to_label
+}
+
+
+
 
