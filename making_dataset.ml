@@ -32,7 +32,7 @@ type parameter = {
   mutable train_graphs : int M.t;
   mutable labeled_graphs : int M.t; (*사실은 set*)
   mutable node_to_label : int M.t;
-  mutable edge_to_label : int list (**)
+  mutable edge_to_label : int M.t (**)
 }
 
 type my_maps = {
@@ -273,20 +273,50 @@ let rec map_to_list after_bindings list
 let intersect a b 
 = List.filter (fun n -> List.mem n b) a
 
+let rec tuplelist_mem x b 
+= match b with
+  | [] -> false
+  | (k,j)::t -> if (x=k) then true
+  else tuplelist_mem x t
+
+let intersect_tuple a b
+= List.filter (fun (x,y) -> tuplelist_mem x b) a
+
+let rec map_to_tuplelist after_bindings list
+= match after_bindings with
+  | [] -> list
+  | (key, _val)::t -> map_to_tuplelist t (list@[(key,_val)])
+
+  let rec tuplelist_to_map list map
+  = match list with
+    | [] -> map
+    | (key, _val)::t -> tuplelist_to_map t (M.add key _val map)
+
 let train_graphs = labeled_graphs
-let left_graphs = intersect (map_to_list (M.bindings labeled_graphs) []) (map_to_list (M.bindings train_graphs) [])
+let left_graphs = intersect_tuple (map_to_tuplelist (M.bindings labeled_graphs) []) (map_to_tuplelist (M.bindings train_graphs) [])
+let left_graphs = tuplelist_to_map left_graphs M.empty
 
 let pred_node_to_nodes = M.empty
 let rec fr_make pred_node_to_nodes myA
 = match myA with 
   | [] -> pred_node_to_nodes
-  | (a,b)::t -> fr_make (M.add a (a,b) pred_node_to_nodes) t
+  | (a,b)::t -> if (not (M.mem a pred_node_to_nodes)) then fr_make (M.add a [(a,b)] pred_node_to_nodes) t
+  else _fr_make a b pred_node_to_nodes t
+
+and _fr_make a b pred t 
+= let k = M.find a pred in
+  fr_make (M.add a (k@[(a,b)]) pred) t
 
 let succ_node_to_nodes = M.empty
 let rec to_make succ_node_to_nodes myA
 = match myA with 
   | [] -> succ_node_to_nodes
-  | (a,b)::t -> to_make (M.add b (a,b) succ_node_to_nodes) t
+  | (a,b)::t -> if (not (M.mem b pred_node_to_nodes)) then to_make (M.add b [(a,b)] succ_node_to_nodes) t
+  else _to_make a b succ_node_to_nodes t
+
+and _to_make a b succ t
+= let k = M.find b succ in
+  to_make (M.add b (k@[(a,b)]) succ) t
 
 let pred_node_to_nodes = fr_make pred_node_to_nodes myA
 let succ_node_to_nodes = to_make succ_node_to_nodes myA
@@ -306,7 +336,6 @@ let my_maps = {
   nodes_to_edge = nodes_to_edge;
   pred_node_to_nodes = pred_node_to_nodes;
   succ_node_to_nodes = succ_node_to_nodes
-
 }
 
 let parameter = {
