@@ -13,10 +13,10 @@ exception InputError
 exception Error
 
 (* M.t = map 의 타입 *)
-type abstract_graph = abs_node list * abs_edge list
-  and abs_node = itv M.t
+type abstract_graph = (abs_node) * (abs_edge)
+  and abs_node = (float*float) M.t list
   and abs_edge = triple list
-  and triple = itv M.t * from_idx * to_idx
+  and triple = (float*float) M.t * from_idx * to_idx
   and itv = Itv of float * float 
   and from_idx = int
   and to_idx = int 
@@ -28,11 +28,11 @@ type igraphs = igraph list
 
 type parameter = {
   mutable graphs : igraphs;
-  mutable left_graphs : int list;
-  mutable train_graphs : int list;
-  mutable labeled_graphs : int list;
-  mutable node_to_label : int list;
-  mutable edge_to_label : int list
+  mutable left_graphs : int M.t;
+  mutable train_graphs : int M.t;
+  mutable labeled_graphs : int M.t; (*사실은 set*)
+  mutable node_to_label : int M.t;
+  mutable edge_to_label : int M.t
 }
 
 type my_maps = {
@@ -47,16 +47,13 @@ type my_maps = {
 (* 합집합, 차집합, 교집합을 위한 list에 사용될 함수 *)
 let rec mem x = function
   | [] -> false
-  | h::t -> h = x || mem x t
+  | h::t -> if (h = x) true else mem x t
 
 let rec remove x = function
   | [] -> failwith "x not in list"
   | h::t -> if h = x then t else h::(remove x t)
 
 let mkset _list = List.sort_uniq compare _list 
-
-let intersect a b 
-= List.filter (fun n -> List.mem (List.nth b n) a) a
 
 let union a b = mkset (a@b) 
 
@@ -67,11 +64,13 @@ let rec difference a b
 
 (* 합집합, 차집합, 교집합을 위한 list에 사용될 함수 구현 끝*)
 
-(*DFS를 위한 함수들*)
-(*
-let rec enu_itv itvs x_edge edge
-= M.filter (fun n -> let (bot, top) = M.find n itvs in (List.nth (List.nth x_edge edge) n) < bot || top < (List.nth (List.nth x_edge edge) n)) itvs
-*)
+let rec map_to_list after_bindings list
+= match after_bindings with
+  | [] -> list
+  | (key, _)::t -> map_to_list t (list@[key])
+
+let intersect a b 
+= List.filter (fun n -> List.mem n b) a
 
 let rec enu_itv itvs_list x_edge edge
 = match itvs_list with
@@ -98,7 +97,6 @@ let rec condition_candidate_edges candidate_edges edges my_maps absNodes abs_edg
     if (cond1 && cond2 && cond3) then condition_candidate_edges (candidate_edges@[h]) t my_maps absNodes abs_edge_first
     else condition_candidate_edges candidate_edges t my_maps absNodes abs_edge_first
 
-
 let get_abs_edge_case_and_update_sub_abs_graph sub_abs_graph abs_edge
 = let (itv, p, q) = abs_edge in
   let (sub_abs_nodes, sub_abs_edges) = sub_abs_graph in
@@ -117,7 +115,8 @@ let get_abs_edge_case_and_update_sub_abs_graph sub_abs_graph abs_edge
     let sub_abs_graph = (sub_abs_nodes, sub_abs_edges) in
     (sub_abs_graph, 0) 
   else (sub_abs_graph, (-1))
-  
+
+
 let rec candidating_fr_nodes candidate_fr_nodes subgraph concrete_edge_belong_abs_edge concrete_node_belong_abs_node absNodes abs_node_fr my_maps target_abs_edge abs_edge_idx_to_concrete_edge abs_node_idx_to_concrete_node abs_edge_idx sub_abs_graph abs_graph graph nodes_to_edge
 = match candidate_fr_nodes with
   | [] -> true
@@ -142,9 +141,9 @@ let rec candidating_fr_nodes candidate_fr_nodes subgraph concrete_edge_belong_ab
     if (exist_subgraph_DFS (new_node, new_edge) sub_abs_graph abs_graph graph (abs_edge_idx + 1) new_abs_node_idx_to_concrete_node new_abs_edge_idx_to_concrete_edge my_maps ) then true
     else candidating_fr_nodes t subgraph concrete_edge_belong_abs_edge concrete_node_belong_abs_node absNodes abs_node_fr my_maps target_abs_edge abs_edge_idx_to_concrete_edge abs_node_idx_to_concrete_node abs_edge_idx sub_abs_graph abs_graph graph nodes_to_edge
   else candidating_fr_nodes t subgraph concrete_edge_belong_abs_edge concrete_node_belong_abs_node absNodes abs_node_fr my_maps target_abs_edge abs_edge_idx_to_concrete_edge abs_node_idx_to_concrete_node abs_edge_idx sub_abs_graph abs_graph graph nodes_to_edge
-and 
 
-candidating_to_nodes candidate_to_nodes abs_graph my_maps subgraph abs_node_to target_abs_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph nodes_to_edge
+
+and candidating_to_nodes candidate_to_nodes abs_graph my_maps subgraph abs_node_to target_abs_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph nodes_to_edge
 = match candidate_to_nodes with
   | [] -> true
   | h::t ->
@@ -175,22 +174,12 @@ candidating_to_nodes candidate_to_nodes abs_graph my_maps subgraph abs_node_to t
       else candidating_to_nodes t abs_graph my_maps subgraph abs_node_to target_abs_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph nodes_to_edge
     else candidating_to_nodes t abs_graph my_maps subgraph abs_node_to target_abs_edge abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge abs_edge_idx sub_abs_graph graph nodes_to_edge
 
-and 
 
-(*0 반환하면 true 아니면 false*)
-exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge my_maps
+and exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge my_maps
 = let (absNodes, absEdges) = abs_graph in
-  if (List.length absEdges = abs_edge_idx) then true
-  else 
-    let target_abs_edge = List.nth absEdges abs_edge_idx in
-    let (new_sub_abs_graph, case) = get_abs_edge_case_and_update_sub_abs_graph sub_abs_graph target_abs_edge in
-    
-    (*
-    let (itv_, abs_node_fr, abs_node_to) = target_abs_edge in
-    let fr_con = M.find abs_node_fr abs_node_idx_to_concrete_node in
-    let to_con = M.find abs_node_to abs_node_idx_to_concrete_node in
-    *)
-    
+  let target_abs_edge = List.nth absEdges abs_edge_idx in
+  let (new_sub_abs_graph, case) = get_abs_edge_case_and_update_sub_abs_graph sub_abs_graph target_abs_edge in
+  
   if (case = 2) then
     let (itv_, abs_node_fr, abs_node_to) = target_abs_edge in
     let fr_con = M.find abs_node_fr abs_node_idx_to_concrete_node in
@@ -223,7 +212,7 @@ exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph abs_edge_idx abs_node_
 
 
 
-let rec checking_exist_subgraph_DFS candidate_edges abs_node_fr abs_node_to my_maps abs_graph graph
+let rec checking_exist_subgraph_DFS candidate_edges abs_node_fr abs_node_to  abs_graph graph my_maps parameter
 = match candidate_edges with
   | [] -> false
   | init_graph_edge::t -> 
@@ -241,36 +230,50 @@ let rec checking_exist_subgraph_DFS candidate_edges abs_node_fr abs_node_to my_m
   let abs_edge_idx_to_concrete_edge = M.add 0 init_graph_edge abs_edge_idx_to_concrete_edge in
   
   if (exist_subgraph_DFS subgraph sub_abs_graph abs_graph graph 1 abs_node_idx_to_concrete_node abs_edge_idx_to_concrete_edge my_maps) then true
-  else checking_exist_subgraph_DFS t abs_node_fr abs_node_to (my_maps) abs_graph graph
+  else checking_exist_subgraph_DFS t abs_node_fr abs_node_to  abs_graph graph my_maps parameter
 
 
-let eval_abs_graph_DFS abs_graph graph my_maps
-= let (nodes, edges) = graph in
-  let (absNodes, absEdges) = abs_graph in
-  let abs_edge_first = List.hd absEdges in
-  let (itv, abs_node_fr, abs_node_to) = abs_edge_first in
-  let candidate_edges = condition_candidate_edges [] edges my_maps absNodes abs_edge_first in
-  let bool_exist_subgraph_DFS = checking_exist_subgraph_DFS candidate_edges abs_node_fr abs_node_to my_maps abs_graph graph
-in bool_exist_subgraph_DFS
+let eval_abs_graph_DFS (abs_graph:abstract_graph) (graph:igraph) my_maps parameter
+= let (absNodes, absEdges) = abs_graph in
+  if (List.length absEdges = 1) then true
+  else 
+    let (nodes, edges) = graph in
+    let (itv, abs_node_fr, abs_node_to) = (List.hd absEdges) in
+    let candidate_edges = condition_candidate_edges [] edges my_maps absNodes (List.hd absEdges) in
+    let bool_exist_subgraph_DFS = checking_exist_subgraph_DFS candidate_edges abs_node_fr abs_node_to  abs_graph graph my_maps parameter
+  in bool_exist_subgraph_DFS
 
-(*DFS를 위한 함수들 끝*)
 
 
-(* DFS 대신 BFS 로 찾아서 구현해볼 것 *)
-let rec update_score abs_graph graphs labeled_graphs left_graphs train_graphs my_maps
-= let (abs_nodes, abs_edges) = abs_graph in
-  let (correct_set, incorrect_set) = saving_set 0 graphs [] [] train_graphs abs_graph my_maps in
-  if (List.length (intersect left_graphs correct_set)) = 0 then 0
-  else (List.length correct_set / (List.length correct_set + List.length incorrect_set + 1))
-
-and saving_set cnt graphs correct_set incorrect_set train_graphs abs_graph my_maps
+let rec saving_cic_set (abs_graph:abstract_graph) (graphs:igraphs) my_maps correct_set incorrect_set abs_edge_len parameter idx
 = match graphs with
-| (n, e)::t -> if(not (List.mem cnt train_graphs)) then saving_set (cnt+1) t correct_set incorrect_set train_graphs abs_graph my_maps
-else let exists = eval_abs_graph_DFS abs_graph graphs my_maps in
-if (exists) then saving_set (cnt+1) t (correct_set@[cnt]) incorrect_set train_graphs abs_graph my_maps
-else saving_set (cnt+1) t correct_set (incorrect_set@[cnt]) train_graphs abs_graph my_maps
-| [] -> (correct_set, incorrect_set)
+  | [] -> (correct_set, incorrect_set)
+  | (n, e)::t -> 
+    if (not (M.mem idx parameter.train_graphs)) then saving_cic_set abs_graph t my_maps correct_set incorrect_set abs_edge_len parameter (idx+1)
+    else 
+      let edges_len = List.length e in
+      if (abs_edge_len > edges_len) then saving_cic_set abs_graph t my_maps correct_set incorrect_set abs_edge_len parameter (idx+1)
+      else 
+        let exist = eval_abs_graph_DFS abs_graph (n,e) my_maps parameter in
+        if (exist) then 
+          if (M.mem idx parameter.labeled_graphs) then saving_cic_set abs_graph t my_maps (M.add idx 0 correct_set) incorrect_set abs_edge_len parameter (idx+1)
+          else saving_cic_set abs_graph t my_maps correct_set (M.add idx 0 incorrect_set) abs_edge_len parameter (idx+1)
+        else saving_cic_set abs_graph t my_maps correct_set incorrect_set abs_edge_len parameter (idx+1)
 
+
+
+let update_score (abs_graph:abstract_graph) (graphs:igraphs) parameter my_maps
+= let correct_set = M.empty in
+  let incorrect_set = M.empty in
+  let (absNodes, absEdges) = abs_graph in
+  let abs_edges_len = List.length absEdges in 
+  let (correct_set, incorrect_set) = saving_cic_set abs_graph graphs my_maps correct_set incorrect_set abs_edges_len parameter 0 in
+
+  if List.length (intersect (map_to_list (M.bindings parameter.left_graphs) []) (map_to_list (M.bindings correct_set) [])) = 0 then 0
+  else 
+    let a = List.length (map_to_list (M.bindings correct_set) []) in
+    let b = a + List.length (map_to_list (M.bindings incorrect_set) []) + 1 in
+    a/b 
 
 (* tuple 때문에 사용하는 list 함수 *)
 let rec saving_like_array _index _saving _list cnt
@@ -295,14 +298,6 @@ let rec mem_triple _triple key
 | [[], (), ()] -> false
 | (itv, e1, e2)::t -> if (List.mem key itv) then true else mem_triple t key
 
-(*
-let rec set_new_itv edge_idx absEdges cnt
-= match absEdges with
-  | (a, b, c)::t -> if (edge_idx = cnt) then ([], b, c)::t 
-  else (a,b,c)::(set_new_itv edge_idx t (cnt+1))
-  | _ -> raise Error
-*)
-
 let empty_list _list
 = match _list with 
   | h::t -> false
@@ -312,17 +307,28 @@ let empty_list _list
 (* *)
 
   (* createInitial_btmUp *)
-let rec make_graphs_len_list left_graphs graphs graphs_len_list 
-= match left_graphs with
+(* left_graphs를 map_to_listV로 바꾼 뒤 이 함수에 집어넣는다. 
+  dataset을 만드는 과정의 함수이므로 일단 주석 처리로 표현하였으나, 
+  본 코드만 돌리고 싶을 경우 map_to_listV에 대한 주석을 풀어야 한다. *)
+(*
+let rec map_to_listV after_bindings list
+= match after_bindings with
+  | [] -> list
+  | (_, _val)::t -> map_to_listV t (list@[(_val)])
+*)
+let rec make_graphs_len_list mk_left_graphs graphs graphs_len_list 
+= match mk_left_graphs with
   | [] -> graphs_len_list 
   | h::t -> 
     let (nodes, edges) = List.nth graphs h in 
     make_graphs_len_list t graphs (graphs_len_list@[(h, List.length edges)])
 
 let btmUp_choose_middle left_graphs graphs
-= let graphs_len_list = make_graphs_len_list left_graphs graphs [] in
-  let graphs_len_list_sorted = tuple_sort graphs_len_list in
-  let (graph_idx, graph_len) = List.nth graphs_len_list_sorted ((List.length left_graphs)/2)
+= let mk_left_graphs = map_to_listV (M.bindings left_graphs) [] in
+  let graphs_len_list = make_graphs_len_list mk_left_graphs graphs [] in
+  (*let graphs_len_list_sorted = tuple_sort graphs_len_list in*)
+  let graphs_len_list_sorted = List.sort (fun (k1, v1) (k2, v2) -> match compare v1 v2 with | 0 -> compare k1 k2 | c -> c) graphs_len_list in
+  let (graph_idx, graph_len) = List.nth graphs_len_list_sorted ((List.length (M.bindings left_graphs))/2)
 in graph_idx
   
 let rec undi_abs_node nodes my_maps abs_nodes node_abs_node_map cnt 
@@ -341,14 +347,17 @@ let rec undi_abs_edge edges my_maps node_abs_node_map abs_edges
   | [] -> abs_edges
   | h::t -> let (from_node, to_node) = List.nth my_maps.myA h in
   if(to_node > from_node) then 
-    let edge_feature = List.nth my_maps.x_edge h in 
-    let new_itv = _undi_abs_edge edge_feature M.empty 0 in
+    let edge_feature = List.nth my_maps.x_edge h in
+    let _itv = M.empty in
+    let new_itv = _undi_abs_edge edge_feature _itv 0 in
     let abs_edge = (new_itv, M.find from_node node_abs_node_map, M.find to_node node_abs_node_map)
     in undi_abs_edge t my_maps node_abs_node_map (abs_edges@[abs_edge])
   else undi_abs_edge t my_maps node_abs_node_map abs_edges
 
 and _undi_abs_edge edge_feature new_itv cnt
-= match edge_feature with | [] -> new_itv | h::t -> _undi_abs_edge t (M.add cnt (h, h) new_itv) (cnt+1)
+= match edge_feature with 
+  | [] -> new_itv 
+  | h::t -> _undi_abs_edge t (M.add cnt (h, h) new_itv) (cnt+1)
 
 let rec graph_slicing_array graphs graph_idx cnt
   = match graphs with
