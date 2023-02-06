@@ -29,3 +29,5 @@ let k = M.add 1 (0, 1) k
 let abs_edge0 = (k, 0, 1)
 let abs_edges = [abs_edge0]
 let abs_graph0 = (abs_nodes, abs_edges)
+
+update_score abs_graph0 parameter.graphs parameter my_maps;;
