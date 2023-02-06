@@ -14,10 +14,10 @@ exception Error
 
 (* M.t = map 의 타입 *)
 type abstract_graph = (abs_node) * (abs_edge)
-  and abs_node = (float*float) M.t list
+  and abs_node = (int * int) M.t list
   and abs_edge = triple list
-  and triple = (float*float) M.t * from_idx * to_idx
-  and itv = Itv of float * float 
+  and triple = (int * int) M.t * from_idx * to_idx
+  and itv = Itv of int * int
   and from_idx = int
   and to_idx = int 
 

@@ -1,3 +1,4 @@
+(*
 module M = Map.Make(Int)
 module IntPairs
 = struct
@@ -11,8 +12,9 @@ module IM = Map.Make(IntPairs)
 
 exception InputError
 exception Error
-
+*)
 (* M.t = map 의 타입 *)
+(*
 type abstract_graph = (abs_node) * (abs_edge)
   and abs_node = (float*float) M.t list
   and abs_edge = triple list
@@ -31,8 +33,8 @@ type parameter = {
   mutable left_graphs : int M.t;
   mutable train_graphs : int M.t;
   mutable labeled_graphs : int M.t; (*사실은 set*)
-  mutable node_to_label : int list;
-  mutable edge_to_label : int list
+  mutable node_to_label : int M.t;
+  mutable edge_to_label : int M.t
 }
 
 type my_maps = {
@@ -43,6 +45,7 @@ type my_maps = {
   mutable pred_node_to_nodes : ((int * int) list) M.t;
   mutable succ_node_to_nodes : ((int * int) list) M.t
 }
+*)
 
 let rec map_to_list after_bindings list
 = match after_bindings with
