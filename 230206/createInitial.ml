@@ -100,7 +100,12 @@ let rec graph_slicing_array graphs graph_idx cnt
     | _ -> raise Error 
 
   let construct_absgraph_undirected parameter my_maps graph_idx
-  = let (nodes, edges) = graph_slicing_array parameter.graphs graph_idx 0 in
-    let (abs_nodes, node_abs_node_map) = undi_abs_node nodes my_maps [] M.empty 0 in
+  = let (nodes, edges) = graph_slicing_array parameter.graphs graph_idx 0 in let k = M.empty in
+    let (abs_nodes, node_abs_node_map) = undi_abs_node nodes my_maps [] k 0 in
     let abs_edges = undi_abs_edge nodes my_maps node_abs_node_map [] in
     (abs_nodes, abs_edges)
+
+let createInitial_btmUp train_graphs weight parameter my_maps
+= let chosen_middle_graph = btmUp_choose_middle parameter.left_graphs parameter.graphs in
+  let minimal_abstract_graph = construct_absgraph_undirected parameter my_maps chosen_middle_graph 
+in minimal_abstract_graph
