@@ -14,10 +14,10 @@ exception Error
 
 (* M.t = map 의 타입 *)
 type abstract_graph = (abs_node) * (abs_edge)
-  and abs_node = (int * int) M.t list
+  and abs_node = (float * float) M.t list
   and abs_edge = triple list
-  and triple = (int * int) M.t * from_idx * to_idx
-  and itv = Itv of int * int
+  and triple = (float * float) M.t * from_idx * to_idx
+  and itv = Itv of float * float
   and from_idx = int
   and to_idx = int 
 
@@ -37,8 +37,8 @@ type parameter = {
 
 type my_maps = {
   mutable myA : (int * int) list;
-  mutable x_edge : int list list;
-  mutable x_node: int list list;
+  mutable x_edge : float list list;
+  mutable x_node: float list list;
   mutable nodes_to_edge : (int) IM.t;
   mutable pred_node_to_nodes : ((int * int) list) M.t;
   mutable succ_node_to_nodes : ((int * int) list) M.t
@@ -247,8 +247,8 @@ let succ_node_to_nodes = M.empty
 
 let rec mk_x _list max_node_label len node_to_label
 = if (max_node_label+1 > len) then 
-  if(List.mem len node_to_label) then mk_x (_list@[1]) max_node_label (len+1) node_to_label
-  else mk_x (_list@[0]) max_node_label (len+1) node_to_label
+  if(List.mem len node_to_label) then mk_x (_list@[1.0]) max_node_label (len+1) node_to_label
+  else mk_x (_list@[0.0]) max_node_label (len+1) node_to_label
 else _list
 
 let rec _Mk_x _list node_to_label max_node_label
@@ -259,7 +259,7 @@ let rec _Mk_x _list node_to_label max_node_label
 let rec map_to_listV after_bindings list
 = match after_bindings with
   | [] -> list
-  | (_, _val)::t -> map_to_listV t (list@[_val])
+  | (_, _val)::t -> map_to_listV t (list@[(_val)])
 
 let x_node = _Mk_x [] (map_to_listV (M.bindings node_to_label) []) max_node_label
 let x_edge = _Mk_x [] (map_to_listV (M.bindings edge_to_label) []) max_edge_label
