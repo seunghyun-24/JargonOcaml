@@ -12,7 +12,6 @@ module IM = Map.Make(IntPairs)
 exception InputError
 exception Error
 
-(* M.t = map 의 타입 *)
 type abstract_graph = (abs_node) * (abs_edge)
   and abs_node = (float * float) M.t list
   and abs_edge = triple list
@@ -48,8 +47,9 @@ type my_maps = {
 
 let rec mem_triple _triple key
 = match _triple with
-| [[], (), ()] -> false
-| (itv, e1, e2)::t -> if (List.mem key itv) then true else mem_triple t key
+| [_, (), ()] -> false
+| (itv, e1, e2)::t -> if (M.mem key itv) then true else mem_triple t key
+| _ -> false
 
 let rec saving_like_array _index _saving _list cnt
 = match _list with
@@ -65,12 +65,11 @@ let rec remove_like_array _index _list cnt
   | h::t -> if(cnt=_index) then t 
             else h::(remove_like_array _index t (cnt+1)) (* <- 오류가 있습니당 *)
 
-
 (**)
 
 let rec remove_nodes nodes edges 
 = match nodes with
-  | [(), ()] -> nodes
+  | [] -> nodes
   | h::t -> 
     if (mem_triple edges h) then h::(remove_nodes t edges)
     else remove_nodes t edges
@@ -88,7 +87,7 @@ and remove_edge_idx best_abs_graph best_score edge_idx parameter my_maps
   let (abs_node, abs_edge) = best_abs_graph in
   let abs_edge = pop abs_edge edge_idx 0 in
   let abs_node = remove_nodes abs_node abs_edge in
-  let new_score = best_score-1 in (*update_score (abs_node, abs_edge) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in*)
+  let new_score = update_score (abs_node, abs_edge) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
   if (new_score >= best_score) then remove_edge_idx (abs_node, abs_edge) new_score (edge_idx-1) parameter my_maps
   else remove_edge_idx best_abs_graph best_score (edge_idx-1) parameter my_maps
 else (best_abs_graph, best_score)
@@ -107,7 +106,7 @@ and while_node_idx best_abs_graph best_score node_idx parameter my_maps
 = if (node_idx >= 0) then 
   let (absNodes, absEdges) = best_abs_graph in
   let new_absNodes = remove_like_array node_idx absNodes 0 in
-  let new_score = best_score -1 in (*update_score (new_absNodes, absEdges) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in *)
+  let new_score = update_score (new_absNodes, absEdges) parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
   if(new_score >= best_score) then while_node_idx (new_absNodes, absEdges) new_score (node_idx-1) parameter my_maps
   else while_node_idx best_abs_graph best_score (node_idx-1) parameter my_maps
 else (best_abs_graph, best_score)
@@ -117,8 +116,9 @@ let rec generalize_edges_top (abs_node, abs_edge) parameter my_maps current_scor
   while_edge_idx (abs_node, abs_edge) current_score edge_idx parameter my_maps
 
 and set_new_itv edge_idx absEdges num
-= 
-
+= let (_itv, new_from, new_to) = List.nth absEdges edge_idx in
+  let k = (M.empty, new_from, new_to) in
+  saving_like_array edge_idx k absEdges num 
 
 and while_edge_idx best_abs_graph best_score edge_idx parameter my_maps
 = if (edge_idx >= 0) then
@@ -130,12 +130,12 @@ and while_edge_idx best_abs_graph best_score edge_idx parameter my_maps
 else (best_abs_graph, best_score)
 
 let search_btmUp abs_graph train_graphs ci weight parameter my_maps
-= (*let s = update_score abs_graph parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in*)
+= let s = update_score abs_graph parameter.graphs parameter.labeled_graphs parameter.left_graphs parameter.train_graphs my_maps in
   let (abs_nodes, abs_edges) = abs_graph in
-  let (best_abs_graph, best_score) = remove_edges_and_nodes abs_graph parameter my_maps 1 (*s*) in
+  let (best_abs_graph, best_score) = remove_edges_and_nodes abs_graph parameter my_maps s in
   let (best_abs_graph, best_score) = generalize_edges_top best_abs_graph parameter my_maps best_score in
   let (best_abs_graph, best_score) = generalize_nodes_top best_abs_graph parameter my_maps best_score in
-  (*let (best_abs_graph, best_score) = refine best_abs_graph parameter my_maps best_score 
-  in *)best_abs_graph
+  let (best_abs_graph, best_score) = refine best_abs_graph parameter my_maps best_score 
+  in best_abs_graph
 
 (*refine 함수는 넘 긴ㅔ..*)

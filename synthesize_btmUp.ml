@@ -295,8 +295,9 @@ let tuple_sort _list
 
 let rec mem_triple _triple key
 = match _triple with
-| [[], (), ()] -> false
-| (itv, e1, e2)::t -> if (List.mem key itv) then true else mem_triple t key
+| [_, (), ()] -> false
+| (itv, e1, e2)::t -> if (M.mem key itv) then true else mem_triple t key
+| _ -> false
 
 let empty_list _list
 = match _list with 
@@ -375,9 +376,10 @@ let construct_absgraph_undirected parameter my_maps graph_idx
   (abs_nodes, abs_edges)
 
   (* search_btmUp *)
+
 let rec remove_nodes nodes edges 
 = match nodes with
-  | [(), ()] -> nodes
+  | [] -> nodes
   | h::t -> 
     if (mem_triple edges h) then h::(remove_nodes t edges)
     else remove_nodes t edges
@@ -423,6 +425,11 @@ let rec generalize_edges_top (abs_node, abs_edge) parameter my_maps current_scor
 = let edge_idx = List.length abs_edge -1 in
   while_edge_idx (abs_node, abs_edge) current_score edge_idx parameter my_maps
 
+and set_new_itv edge_idx absEdges num
+= let (_itv, new_from, new_to) = List.nth absEdges edge_idx in
+  let k = (M.empty, new_from, new_to) in
+  saving_like_array edge_idx k absEdges num 
+
 and while_edge_idx best_abs_graph best_score edge_idx parameter my_maps
 = if (edge_idx >= 0) then
   let (absNodes, absEdges) = best_abs_graph in
@@ -431,6 +438,7 @@ and while_edge_idx best_abs_graph best_score edge_idx parameter my_maps
   if(new_score >= best_score) then while_edge_idx (absNodes, new_absEdges) new_score (edge_idx-1) parameter my_maps
   else while_edge_idx best_abs_graph best_score (edge_idx-1) parameter my_maps
 else (best_abs_graph, best_score)
+
 
   (* refine *)
 
