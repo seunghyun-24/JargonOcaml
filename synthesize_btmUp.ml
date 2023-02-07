@@ -350,8 +350,10 @@ let rec undi_abs_edge edges my_maps node_abs_node_map abs_edges
     let edge_feature = List.nth my_maps.x_edge h in
     let _itv = M.empty in
     let new_itv = _undi_abs_edge edge_feature _itv 0 in
-    let abs_edge = (new_itv, M.find from_node node_abs_node_map, M.find to_node node_abs_node_map)
-    in undi_abs_edge t my_maps node_abs_node_map (abs_edges@[abs_edge])
+    if(M.mem from_node node_abs_node_map && M.mem to_node node_abs_node_map) then 
+      let abs_edge = (new_itv, M.find from_node node_abs_node_map, M.find to_node node_abs_node_map)
+      in undi_abs_edge t my_maps node_abs_node_map (abs_edges@[abs_edge])
+    else undi_abs_edge t my_maps node_abs_node_map abs_edges
   else undi_abs_edge t my_maps node_abs_node_map abs_edges
 
 and _undi_abs_edge edge_feature new_itv cnt
@@ -366,11 +368,11 @@ let rec graph_slicing_array graphs graph_idx cnt
       else graph_slicing_array t graph_idx (cnt+1)
     | _ -> raise Error 
 
-  let construct_absgraph_undirected parameter my_maps graph_idx
-  = let (nodes, edges) = graph_slicing_array parameter.graphs graph_idx 0 in
-    let (abs_nodes, node_abs_node_map) = undi_abs_node nodes my_maps [] M.empty 0 in
-    let abs_edges = undi_abs_edge nodes my_maps node_abs_node_map [] in
-    (abs_nodes, abs_edges)
+let construct_absgraph_undirected parameter my_maps graph_idx
+= let (nodes, edges) = graph_slicing_array parameter.graphs graph_idx 0 in let k = M.empty in
+  let (abs_nodes, node_abs_node_map) = undi_abs_node nodes my_maps [] k 0 in
+  let abs_edges = undi_abs_edge nodes my_maps node_abs_node_map [] in
+  (abs_nodes, abs_edges)
 
   (* search_btmUp *)
 let rec remove_nodes nodes edges 

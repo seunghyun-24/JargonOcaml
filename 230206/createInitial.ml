@@ -83,8 +83,10 @@ let rec undi_abs_edge edges my_maps node_abs_node_map abs_edges
     let edge_feature = List.nth my_maps.x_edge h in
     let _itv = M.empty in
     let new_itv = _undi_abs_edge edge_feature _itv 0 in
-    let abs_edge = (new_itv, M.find from_node node_abs_node_map, M.find to_node node_abs_node_map)
-    in undi_abs_edge t my_maps node_abs_node_map (abs_edges@[abs_edge])
+    if(M.mem from_node node_abs_node_map && M.mem to_node node_abs_node_map) then 
+      let abs_edge = (new_itv, M.find from_node node_abs_node_map, M.find to_node node_abs_node_map)
+      in undi_abs_edge t my_maps node_abs_node_map (abs_edges@[abs_edge])
+    else undi_abs_edge t my_maps node_abs_node_map abs_edges
   else undi_abs_edge t my_maps node_abs_node_map abs_edges
 
 and _undi_abs_edge edge_feature new_itv cnt
