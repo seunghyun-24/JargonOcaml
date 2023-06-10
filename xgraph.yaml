@@ -153,4 +153,3 @@ dependencies:
     - typing-inspect==0.7.1
     - urllib3==1.26.7
     - wcwidth==0.2.5
-prefix: /home/minseok/anaconda3/envs/xgraph
